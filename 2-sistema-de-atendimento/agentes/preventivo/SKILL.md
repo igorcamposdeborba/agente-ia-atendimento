@@ -18,39 +18,114 @@ as regras da instrução de guardrails do Projeto.
 - **B — Manutenção vencida:** preventiva vencida ou nunca realizada, **independentemente de recência** (pega inclusive cliente em contato recente). Na Fase 1 é um **proxy** (sem visita/movimento há ≥ 12 meses; não há coluna de preventiva no export).
 - A fila é a **união de A e B, deduplicada** — um cliente que dispara os dois é **um contato só**, com os dois assuntos.
 
+---
+
 ## Saída A — documento de clientes a contatar
+
+### REGRA DE OURO: um documento por execução
+
+**Chame `salvar_documento_docx` UMA ÚNICA VEZ por execução.** A tool **nunca sobrescreve** — ela
+adiciona índice e data/hora ao nome, então toda chamada cria um arquivo novo. Duas chamadas =
+dois arquivos na pasta do atendente, e ele não sabe qual vale.
+
+Consequências práticas:
+- **Toda conferência acontece ANTES de chamar a tool.** Monte o `conteudo` inteiro, confira, e só
+  então salve.
+- **Se perceber erro depois de salvar:** NÃO gere outro arquivo por conta própria. Avise o
+  atendente — diga o que ficou errado e o caminho do arquivo — e **pergunte** se ele quer que você
+  gere um novo. Só gere mediante resposta dele.
+- **Nunca** salve uma versão "parcial" ou "prévia" para depois salvar a "completa".
+
+### Passo a passo
+
 1. Chame **`clientes_para_contato()` sem parâmetro** — ela já devolve a **fila completa: união de A (inatividade) e B (preventiva vencida), deduplicada** e priorizada por RFM. **Não** chame `clientes_inativos` nem `clientes_para_contato(preventiva_vencida=True)` para montar o documento padrão — essas só retornam **um** gatilho e fazem a fila sair incompleta. Use uma delas **apenas** se o atendente pedir explicitamente só um gatilho (ex.: "só os inativos" → `clientes_inativos`; "só os de preventiva vencida" → `clientes_para_contato(preventiva_vencida=True)`).
-2. **Gere um bloco `## ` para CADA cliente que a fila retornou — todos, não só o primeiro.** Se a fila trouxe 5 clientes, o documento tem 5 blocos. A ordem é a que a tool já devolve (RFM: recência + antiguidade + **valor = soma de todas as NF do cliente**).
-3. Para cada cliente: `ficha_cliente` (e `historico_relacionamento` quando ajudar) → definir o **segmento** e o **motivo (gatilho)**.
-4. `consultar_wiki("tom")` e `consultar_wiki("perguntas-descoberta")` **uma vez** (valem para todos).
-5. Gerar **um único** documento em **Word (`.docx`)** com todos os clientes — **não** entregar como Markdown nem no chat. Um bloco por cliente: razão social + contato do representante, produtos, **motivo (gatilho: inatividade / manutenção / ambos)**, meses sem contato, tempo de casa · valor, segmento, ângulo sugerido + 2–3 perguntas iniciais.
+2. Para **cada** cliente da fila: `ficha_cliente` e `historico_relacionamento` → levantar todos os campos do template abaixo. Não pule o `historico_relacionamento`: é dele que saem a última interação e a última visita.
+3. `consultar_wiki("tom")` e `consultar_wiki("perguntas-descoberta")` **uma vez** (valem para todos).
+4. Monte o `conteudo` completo, com **um bloco `## ` por cliente** — todos, não só o primeiro. Se a fila trouxe 5 clientes, são 5 blocos.
+5. **Confira antes de salvar** (checklist abaixo).
+6. Chame `salvar_documento_docx` — uma vez.
+7. Informe ao atendente o **caminho retornado** pela tool. **Não** entregue como Markdown no chat.
 
-> **Checagem antes de gerar o `.docx`:** conte quantos clientes a fila retornou e garanta que o `conteudo` tem **o mesmo número de blocos `## `**. Se gerou menos, você deixou clientes de fora — refaça incluindo todos.
+### Checklist antes de chamar a tool
 
-### Como gerar o `.docx` (obrigatório)
-Chame a tool **`salvar_documento_docx`** do MCP — ela grava o Word no computador (via Apache POI, **sem Python e sem depender de "code execution"**) e retorna o caminho. Passe:
-- `titulo`: "RASCUNHO — Contato proativo (Preventivo)". Só cite um gatilho no título ("· inatividade" ou "· preventiva vencida") quando o atendente **restringiu** a fila a esse gatilho; na fila completa (A∪B), não rotule como se fosse um gatilho só.
-- `conteudo`: o plano em texto com **marcação leve** — comece com uma linha de aviso "Rascunho para revisão humana. Nada foi enviado."; `## ` por cliente (na ordem RFM), `- ` para os campos, e "Rótulo: valor" para deixar o rótulo em negrito. Marque **[CONFERIR: match incerto]** no título do cliente quando `precisaConferenciaHumana` (ex.: NPS casado por nome).
-- `nomeArquivo`: **"plano de atendimento"** (a tool adiciona sozinha o índice e a data/hora — ex.: `1- plano de atendimento - 15-08-2026 as 17-54.docx`).
+Percorra os quatro itens. Se algum falhar, **corrija o `conteudo`** — ainda sem chamar a tool.
 
-Regras do conteúdo:
-- **CNPJ:** inclua um campo `- CNPJ: <cnpj como veio da ficha>` por cliente. Passe o CNPJ **como as tools mostram (mascarado)** — o MCP grava o **CNPJ completo** no arquivo (documento interno). Não tente adivinhar o CNPJ completo.
-- **Valor:** é a **soma de todas as notas fiscais** do cliente (`ValorTotalNF`), não a mensalidade — apresente como valor acumulado em NF.
-- **Português correto, com acentuação.** Escreva o documento em português natural e acentuado.
-- Ao final, informe ao atendente o **caminho retornado** pela tool. **Não** entregue como Markdown no chat.
+- [ ] O número de blocos `## ` é igual ao número de clientes que a fila devolveu.
+- [ ] **Todo** cliente tem os 12 campos do template preenchidos (ou marcados como ausentes na base).
+- [ ] Clientes com `precisaConferenciaHumana` têm `[CONFERIR: match incerto]` no título **e** o campo "Confiança do cruzamento: INCERTO".
+- [ ] O `nomeArquivo` é exatamente `plano de atendimento`.
 
-Exemplo de `conteudo`:
+### Parâmetros da tool
+
+- `titulo`: `"RASCUNHO — Contato proativo (Preventivo)"`. Só acrescente um gatilho no título
+  (`"· inatividade"` ou `"· preventiva vencida"`) quando o atendente **restringiu** a fila a esse
+  gatilho. Na fila completa (A∪B), não rotule como se fosse um gatilho só.
+- `nomeArquivo`: **exatamente `plano de atendimento`** — sem sufixos, sem variações. Não use
+  "completo", "preventivo", "v2", "final" nem data (a tool já adiciona índice e data/hora
+  sozinha: `7- plano de atendimento - 08-09-2026 as 12-45.docx`).
+- `conteudo`: o plano em texto com marcação leve — ver template abaixo.
+
+---
+
+### Template do `conteudo`
+
+Abertura (duas linhas fixas + uma de resumo da fila):
+
 ```
 Rascunho para revisão humana. Nada foi enviado.
 
-## 1. Frigorífico Campo Verde S/A — RFM 4.6 · [CONFERIR se contrato encerrado]
-- CNPJ: 45.***.***-23
-- Representante: Fernanda · (55) 99644-5353
-- Produtos: CFTV (20) · Valor (soma NF): R$ 5.200 · Antiguidade: 60 meses
-- Motivo (gatilho): inatividade + preventiva vencida · Inatividade: 14 meses
-- Ângulo sugerido: reconhecer a dor do CFTV sem justificar; cuidado direto.
-- Perguntas: (1) A imagem do CFTV continua ruim? (2) O que faltou para resolvermos antes?
+Fila do Preventivo (gatilhos A + B, deduplicada): N clientes de M na base, em ordem de prioridade RFM. [Se houver match incerto: X estão com match incerto e precisam de conferência humana antes de qualquer contato.]
 ```
+
+Depois, **um bloco por cliente**, na ordem RFM devolvida pela tool. Todos os 12 campos, sempre —
+quando a base não tiver o dado, escreva o que falta em vez de omitir a linha:
+
+```
+## N. RAZÃO SOCIAL — RFM X.X [· CONFERIR: match incerto]
+- CNPJ: <como veio da ficha>
+- Representante: <nome ou "não consta na base"> · Telefone: <telefone> [CONFERIR se ausente ou com cara de placeholder]
+- Produtos: <produtos contratados>
+- Valor (soma NF): R$ X · Antiguidade: N meses
+- Motivo (gatilho): <inatividade / preventiva vencida / ambos> · Inatividade: N meses
+- Última interação (engajamento do cliente): <data> — <o que foi: NPS, movimento no N1, conversa no Megazap>
+- Última visita: <data> — <preventiva vencida (proxy) / em dia>
+- Status do cadastro: <Ativo/Encerrado> · Confiança do cruzamento: <EXATO / INCERTO — casou por razão social>
+- NPS: nota N (<promotor/passivo/detrator>) — "<comentário>"
+- Segmento de tom: <segmento> — <como abordar, com as proibições explícitas do tom>
+- Ângulo sugerido: <2 a 3 linhas: por onde abrir, o que NÃO presumir, qual o próximo passo de baixo atrito>
+- Perguntas: (1) ... (2) ... (3) ...
+- Pendências antes do contato: <o que o atendente precisa conferir/resolver antes de acionar; "nenhuma" se não houver>
+```
+
+Regras de preenchimento:
+- **NPS:** inclua a linha só quando houver resposta registrada. Sem NPS, escreva
+  `- NPS: sem resposta registrada`.
+- **Ângulo sugerido:** não é uma frase pronta para enviar — é orientação para o atendente. Quando
+  não houver problema reportado, diga explicitamente **"não presuma insatisfação"**.
+- **Perguntas:** abertas, sem indução, uma de cada vez na conversa. Para cliente com match
+  incerto, prefixe com `(após conferência)`.
+- **Pendências:** é onde entram dados suspeitos — representante ausente, telefone com cara de
+  placeholder, valor de NF zerado apesar de contrato ativo, ausência de histórico. Nunca deixe
+  esses achados só no corpo do texto.
+
+Fechamento (texto simples, **sem** `## ` — para não contar como bloco de cliente):
+
+```
+Observações para o atendente
+
+- Nada aqui foi enviado ao cliente. Revise, edite e dispare você mesmo.
+- [Se houver] Os itens N e M têm match incerto (casaram por nome) — confirme o vínculo antes de qualquer contato.
+- [Se aplicável] Valor (soma NF) R$ 0,00: não há nota fiscal registrada nesta base — confira no cadastro real.
+- Envio de marketing ou disparo automático não conta como contato: a recência considera só engajamento do próprio cliente (NPS, movimento no N1, conversa no Megazap).
+```
+
+### Outras regras do conteúdo
+
+- **CNPJ:** um campo `- CNPJ: <cnpj como veio da ficha>` por cliente. Passe o CNPJ **como as tools mostram (mascarado)** — o MCP grava o **CNPJ completo** no arquivo (documento interno). Não tente adivinhar o CNPJ completo.
+- **Valor:** é a **soma de todas as notas fiscais** do cliente (`ValorTotalNF`), não a mensalidade — apresente como valor acumulado em NF.
+- **Português correto, com acentuação.** Escreva o documento em português natural e acentuado.
+
+---
 
 ## Saída B — copiloto de conversa
 - **Antes:** `consultar_wiki("perguntas-descoberta")` + `ficha_cliente` → perguntas de descoberta sob medida (abertas, sem indução, **uma de cada vez**), para revelar problemas não reportados.
@@ -67,3 +142,4 @@ Rascunho para revisão humana. Nada foi enviado.
 - Dois toques para o mesmo cliente (a fila deve deduplicar A+B).
 - Afirmar histórico ou fatos que não vieram das tools/ficha.
 - Abordar um cliente com **match incerto** (ex.: NPS casado só por nome) sem conferência humana antes.
+- **Gerar mais de um `.docx` por execução.**
