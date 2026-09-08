@@ -67,6 +67,11 @@ public class ClienteService {
         return clientes().size();
     }
 
+    /** Visao consolidada (Cliente 360) de todos os clientes — usada pela exportacao em .xlsx. */
+    public List<Cliente360> clientesConsolidados() {
+        return clientes();
+    }
+
     /**
      * Substitui os CNPJs mascarados (ex.: 12.***.***-90) pelos CNPJs completos e formatados.
      * Usado ao gerar o .docx (documento interno): o mascaramento vale so no canal MCP<->IA;

@@ -271,6 +271,7 @@ Write-Step 'Skills e Instruction (para colar no Projeto do Claude)'
 Write-Info "Instruction (regras/LGPD): $agentesDir\instrucao-guardrails.md"
 Write-Info "Skill Preventivo        : $agentesDir\preventivo\SKILL.md"
 Write-Info "Skill Pos-NPS           : $agentesDir\pos-nps\SKILL.md"
+Write-Info "Skill Exportar cadastro : $agentesDir\exportar-cadastro\SKILL.md  (gatilho: 'gerar excel')"
 Write-Info "A wiki NAO precisa instalar: o agente le pela tool consultar_wiki."
 
 # --- fim ---
@@ -281,7 +282,7 @@ Write-Host @"
 
 Proximos passos (manuais, no app do Claude):
   1. FECHE o Claude Desktop pela bandeja do sistema (botao direito -> Sair) e abra de novo.
-  2. Confirme que 'millenium-agente-ia' aparece conectado com 9 tools.
+  2. Confirme que 'millenium-agente-ia' aparece conectado com 10 tools.
   3. Crie/abra um Projeto no Claude e:
        - cole o conteudo de agentes\INSTRUCTION-lgpd.md nas Instrucoes do Projeto;
        - cadastre as Skills agentes\SKILL-preventivo.md e agentes\SKILL-pos-nps.md.

@@ -3,6 +3,7 @@ package com.millenium.agente;
 import com.millenium.agente.config.MilleniumProperties;
 import com.millenium.agente.mcp.ClienteTools;
 import com.millenium.agente.mcp.DocumentoTools;
+import com.millenium.agente.mcp.ExportacaoTools;
 import com.millenium.agente.mcp.WikiTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -27,9 +28,9 @@ public class MilleniumMcpApplication {
     /** Registra os metodos anotados com @Tool como tools do MCP server. */
     @Bean
     public ToolCallbackProvider milleniumTools(ClienteTools clienteTools, WikiTools wikiTools,
-                                               DocumentoTools documentoTools) {
+                                               DocumentoTools documentoTools, ExportacaoTools exportacaoTools) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(clienteTools, wikiTools, documentoTools)
+                .toolObjects(clienteTools, wikiTools, documentoTools, exportacaoTools)
                 .build();
     }
 }

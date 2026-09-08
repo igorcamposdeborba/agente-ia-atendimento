@@ -68,14 +68,18 @@
 
     <build>
         <resources>
-            <!-- recursos padrao (application.properties, logback, etc.) -->
+            <!-- recursos padrao (application.properties, logback) + planilhas ficticias em
+                 src/main/resources/fonte/*.xlsx. filtering=false: NUNCA aplicar resource-filtering,
+                 senao o Maven poderia corromper os .xlsx (binarios) ao tentar trocar tokens. -->
             <resource>
                 <directory>src/main/resources</directory>
+                <filtering>false</filtering>
             </resource>
             <!-- wiki editavel na raiz do projeto, empacotada no jar como fallback (classpath:wiki/) -->
             <resource>
                 <directory>wiki</directory>
                 <targetPath>wiki</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
         <plugins>

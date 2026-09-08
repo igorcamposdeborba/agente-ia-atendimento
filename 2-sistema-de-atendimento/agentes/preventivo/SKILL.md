@@ -19,15 +19,17 @@ as regras da instrução de guardrails do Projeto.
 - A fila é a **união de A e B, deduplicada** — um cliente que dispara os dois é **um contato só**, com os dois assuntos.
 
 ## Saída A — documento de clientes a contatar
-1. `clientes_inativos(...)` (gatilho A) **+** `clientes_para_contato(preventiva_vencida=True)` (gatilho B).
-2. **Deduplicar** e priorizar por RFM (recência + antiguidade + **valor = soma de todas as NF do cliente**).
-3. Para cada: `historico_relacionamento` + `ficha_cliente` → definir o **segmento**.
-4. `consultar_wiki("tom")` e `consultar_wiki("perguntas-descoberta")`.
-5. Gerar o documento em **Word (`.docx`)** — **não** entregar como Markdown nem no chat. Um item por cliente: razão social + contato do representante, produtos, **motivo (gatilho: inatividade / manutenção / ambos)**, meses sem contato, tempo de casa · valor, segmento, ângulo sugerido + 2–3 perguntas iniciais.
+1. Chame **`clientes_para_contato()` sem parâmetro** — ela já devolve a **fila completa: união de A (inatividade) e B (preventiva vencida), deduplicada** e priorizada por RFM. **Não** chame `clientes_inativos` nem `clientes_para_contato(preventiva_vencida=True)` para montar o documento padrão — essas só retornam **um** gatilho e fazem a fila sair incompleta. Use uma delas **apenas** se o atendente pedir explicitamente só um gatilho (ex.: "só os inativos" → `clientes_inativos`; "só os de preventiva vencida" → `clientes_para_contato(preventiva_vencida=True)`).
+2. **Gere um bloco `## ` para CADA cliente que a fila retornou — todos, não só o primeiro.** Se a fila trouxe 5 clientes, o documento tem 5 blocos. A ordem é a que a tool já devolve (RFM: recência + antiguidade + **valor = soma de todas as NF do cliente**).
+3. Para cada cliente: `ficha_cliente` (e `historico_relacionamento` quando ajudar) → definir o **segmento** e o **motivo (gatilho)**.
+4. `consultar_wiki("tom")` e `consultar_wiki("perguntas-descoberta")` **uma vez** (valem para todos).
+5. Gerar **um único** documento em **Word (`.docx`)** com todos os clientes — **não** entregar como Markdown nem no chat. Um bloco por cliente: razão social + contato do representante, produtos, **motivo (gatilho: inatividade / manutenção / ambos)**, meses sem contato, tempo de casa · valor, segmento, ângulo sugerido + 2–3 perguntas iniciais.
+
+> **Checagem antes de gerar o `.docx`:** conte quantos clientes a fila retornou e garanta que o `conteudo` tem **o mesmo número de blocos `## `**. Se gerou menos, você deixou clientes de fora — refaça incluindo todos.
 
 ### Como gerar o `.docx` (obrigatório)
 Chame a tool **`salvar_documento_docx`** do MCP — ela grava o Word no computador (via Apache POI, **sem Python e sem depender de "code execution"**) e retorna o caminho. Passe:
-- `titulo`: "RASCUNHO — Contato proativo · <gatilho>".
+- `titulo`: "RASCUNHO — Contato proativo (Preventivo)". Só cite um gatilho no título ("· inatividade" ou "· preventiva vencida") quando o atendente **restringiu** a fila a esse gatilho; na fila completa (A∪B), não rotule como se fosse um gatilho só.
 - `conteudo`: o plano em texto com **marcação leve** — comece com uma linha de aviso "Rascunho para revisão humana. Nada foi enviado."; `## ` por cliente (na ordem RFM), `- ` para os campos, e "Rótulo: valor" para deixar o rótulo em negrito. Marque **[CONFERIR: match incerto]** no título do cliente quando `precisaConferenciaHumana` (ex.: NPS casado por nome).
 - `nomeArquivo`: **"plano de atendimento"** (a tool adiciona sozinha o índice e a data/hora — ex.: `1- plano de atendimento - 15-08-2026 as 17-54.docx`).
 

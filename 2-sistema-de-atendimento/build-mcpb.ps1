@@ -48,14 +48,11 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'server') | Out-Null
 Copy-Item (Join-Path $root 'mcpb\manifest.json') (Join-Path $stage 'manifest.json') -Force
 Copy-Item $jar (Join-Path $stage 'server\millenium-agente-ia.jar') -Force
-# planilhas .xlsx que o MCP le (a extensao aponta fonte_dir para ${__dirname}/fonte)
-New-Item -ItemType Directory -Force -Path (Join-Path $stage 'fonte') | Out-Null
-$xlsx = Get-ChildItem -Path (Join-Path $root 'fonte') -Filter '*.xlsx' -ErrorAction SilentlyContinue
-if (-not $xlsx) { throw "Nenhum .xlsx em fonte\ para empacotar. Copie os Excel para a pasta fonte\." }
-Copy-Item $xlsx.FullName (Join-Path $stage 'fonte') -Force
+# As planilhas ficticias viajam DENTRO do jar (src/main/resources/fonte) e sao semeadas em
+# ${HOME}/MilleniumAgenteIA/fonte no 1o uso - nao e preciso empacota-las na extensao.
 # documentos uteis dentro do pacote (referencia)
 Copy-Item (Join-Path $root 'agentes') (Join-Path $stage 'agentes') -Recurse -Force
-Ok "Conteudo montado em: $stage ($($xlsx.Count) planilha(s))"
+Ok "Conteudo montado em: $stage"
 
 # --- empacota ---
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
@@ -97,7 +94,8 @@ Como o usuario instala (Claude Desktop):
   2. Abra o Claude Desktop -> Configuracoes -> Extensions (ou Desenvolvedor).
   3. Arraste o arquivo .mcpb para a janela (ou 'Install from file') e confirme.
      - Em 'Java 21': deixe 'java' se estiver no PATH, ou aponte o java.exe.
-     - Em 'Pasta de fontes': deixe o padrao (as 5 planilhas ja vem no pacote; o MCP so le).
+     - Em 'Pasta de fontes': deixe o padrao ${HOME}/MilleniumAgenteIA/fonte (as 5 planilhas
+       ficticias sao semeadas ali no 1o uso; para dados reais, troque os .xlsx nessa pasta).
   4. Nas Skills/Instruction do Projeto, cole os arquivos da pasta 'agentes\'
      (instrucao-guardrails.md, preventivo\SKILL.md, pos-nps\SKILL.md).
 "@ -ForegroundColor White

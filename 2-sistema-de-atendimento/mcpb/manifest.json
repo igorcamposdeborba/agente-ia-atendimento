@@ -4,7 +4,7 @@
   "display_name": "Millenium Agente IA",
   "version": "0.1.0",
   "description": "Servidor MCP (Fase 1 - PoC Excel) dos agentes de atendimento da Millenium: visao consolidada do cliente (Cliente 360) e wiki de atendimento. Retorna dados, nunca instrucoes; o envio ao cliente e sempre humano.",
-  "long_description": "Fornece as tools ficha_cliente, situacao_nps, clientes_inativos, clientes_para_contato, historico_relacionamento, estimar_servico, consultar_wiki e recarregar_dados. O MCP apenas LE os Excel da pasta de dados (nao gera nada). Vem com planilhas ficticias de exemplo; aponte a pasta de dados para seus exports reais quando quiser. Requer Java 21 instalado na maquina.",
+  "long_description": "Fornece as tools ficha_cliente, situacao_nps, clientes_inativos, clientes_para_contato, historico_relacionamento, estimar_servico, consultar_wiki, salvar_documento_docx, exportar_cadastro_xlsx e recarregar_dados. O MCP LE os Excel da pasta de dados e grava documentos (.docx) e a exportacao do cadastro (.xlsx) na pasta de saida. Vem com planilhas ficticias de exemplo (semeadas em ${HOME}/MilleniumAgenteIA/fonte no 1o uso); aponte para seus exports reais quando quiser. Requer Java 21 instalado na maquina.",
   "author": {
     "name": "Millenium Tecnologia"
   },
@@ -32,6 +32,7 @@
     { "name": "estimar_servico", "description": "Estimativa de servico (nao calibrada na Fase 1)." },
     { "name": "consultar_wiki", "description": "Consulta a wiki (tom, tratativas, perguntas, principios)." },
     { "name": "salvar_documento_docx", "description": "Salva o plano/resposta como Word .docx (via Apache POI, sem Python)." },
+    { "name": "exportar_cadastro_xlsx", "description": "Exporta o cadastro normalizado (Cliente 360) para Excel .xlsx na pasta de saida. Use so a pedido do atendente (gatilho 'gerar excel'), apos Preventivo/Pos-NPS." },
     { "name": "recarregar_dados", "description": "Recarrega os .xlsx da pasta de dados." }
   ],
   "user_config": {
@@ -45,8 +46,8 @@
     "fonte_dir": {
       "type": "directory",
       "title": "Pasta de fontes (.xlsx)",
-      "description": "Onde o MCP LE os exports N1/Megazap/People/NPS. O padrao usa as planilhas ficticias que acompanham a extensao (funciona de imediato). Para dados reais, aponte para uma pasta sua - sugestao: C:/Users/SEU-USUARIO/MilleniumAgenteIA/fonte ou uma pasta compartilhada do time.",
-      "default": "${__dirname}/fonte",
+      "description": "Onde o MCP LE as 5 planilhas (N1 Contatos/Sistema/Saidas por NF, Megazap, NPS). Padrao: ${HOME}/MilleniumAgenteIA/fonte - o mesmo caminho em todo o projeto. Na 1a execucao, se a pasta estiver vazia, as planilhas ficticias embutidas no jar sao semeadas ali (funciona de imediato). Para dados reais, basta substituir os .xlsx nessa pasta.",
+      "default": "${HOME}/MilleniumAgenteIA/fonte",
       "required": false
     },
     "wiki_dir": {

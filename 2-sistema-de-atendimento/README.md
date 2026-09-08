@@ -49,6 +49,7 @@ O restante deste README documenta a arquitetura e o build manual.
 | `estimar_servico`          | Estimativa de serviço — **não calibrada na Fase 1** (tempos são placeholders em `wiki/parametros.md`).                                                                                                                                                                                                               |
 | `consultar_wiki`           | Busca na wiki (tom, tratativas, princípios, perguntas, parâmetros, governança).                                                                                                                                                                                                                                      |
 | `salvar_documento_docx`    | Salva o plano do Preventivo ou a resposta do Pós-NPS como **Word `.docx`** (via Apache POI, **sem Python**) em `millenium.output-dir`. **CNPJ sai completo** no arquivo (o mascaramento vale só no canal MCP↔IA); nome ordenável com índice + data/hora (ex.: `1- plano de atendimento - 15-08-2026 as 17-54.docx`). |
+| `exportar_cadastro_xlsx`   | Exporta o **cadastro normalizado (Cliente 360)** para **Excel `.xlsx`** em `millenium.output-dir` (uma linha por cliente). Use **só a pedido** do atendente (gatilho *"gerar excel"*), em geral após Preventivo/Pós-NPS. **CNPJ completo** no arquivo (interno). Skill: `agentes/exportar-cadastro`.                     |
 | `recarregar_dados`         | Relê os `.xlsx` após um novo export.                                                                                                                                                                                                                                                                                 |
 
 ## Regras de negócio implementadas
@@ -103,7 +104,7 @@ Pré-requisitos: **JDK 21** e **Maven** (o IntelliJ já traz um).
 2. Reinicie o Claude Desktop. As tools do `millenium-agente-ia` aparecem no chat.
 3. No **Projeto** do Claude:
    - cole `agentes/instrucao-guardrails.md` nas **instruções do Projeto**;
-   - cadastre as **Skills** `agentes/preventivo/SKILL.md` e `agentes/pos-nps/SKILL.md`.
+   - cadastre as **Skills** `agentes/preventivo/SKILL.md`, `agentes/pos-nps/SKILL.md` e `agentes/exportar-cadastro/SKILL.md` (esta última exporta o Cliente 360 em Excel, só no gatilho *"gerar excel"*).
 
 ## Dados e wiki
 As planilhas (`fonte/`), a wiki (`wiki/`) e as skills/instrução (`agentes/`) são o **conteúdo real** do pacote de trabalho, todas **editáveis** (a wiki é empacotada no jar como fallback). As cinco planilhas fictícias trazem ~10 clientes e cenários úteis para validar o cruzamento: cliente antigo sem engajamento (gatilho A), cliente ativo com preventiva vencida (gatilho B), NPS que casa por **nome fantasia** e um NPS que **não casa com segurança** (vai para conferência humana). A wiki é servida pela tool `consultar_wiki`.
