@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "millenium-agente-ia": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "C:\\Exercicios\\claude\\millenium-agente-ia\\target\\millenium-agente-ia-0.1.0-SNAPSHOT.jar",
+        "--millenium.fonte-dir=C:\\Exercicios\\claude\\millenium-agente-ia\\fonte",
+        "--millenium.wiki-dir=C:\\Exercicios\\claude\\millenium-agente-ia\\wiki",
+        "--millenium.output-dir=C:\\Users\\SEU-USUARIO\\MilleniumAgenteIA\\saidas"
+      ]
+    }
+  }
+}

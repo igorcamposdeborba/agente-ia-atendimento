@@ -1,0 +1,70 @@
+{
+  "manifest_version": "0.2",
+  "name": "millenium-agente-ia",
+  "display_name": "Millenium Agente IA",
+  "version": "0.1.0",
+  "description": "Servidor MCP (Fase 1 - PoC Excel) dos agentes de atendimento da Millenium: visao consolidada do cliente (Cliente 360) e wiki de atendimento. Retorna dados, nunca instrucoes; o envio ao cliente e sempre humano.",
+  "long_description": "Fornece as tools ficha_cliente, situacao_nps, clientes_inativos, clientes_para_contato, historico_relacionamento, estimar_servico, consultar_wiki e recarregar_dados. O MCP apenas LE os Excel da pasta de dados (nao gera nada). Vem com planilhas ficticias de exemplo; aponte a pasta de dados para seus exports reais quando quiser. Requer Java 21 instalado na maquina.",
+  "author": {
+    "name": "Millenium Tecnologia"
+  },
+  "keywords": ["millenium", "atendimento", "crm", "nps", "reativacao", "excel"],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/millenium-agente-ia.jar",
+    "mcp_config": {
+      "command": "${user_config.java_path}",
+      "args": [
+        "-jar",
+        "${__dirname}/server/millenium-agente-ia.jar",
+        "--millenium.fonte-dir=${user_config.fonte_dir}",
+        "--millenium.wiki-dir=${user_config.wiki_dir}",
+        "--millenium.output-dir=${user_config.output_dir}"
+      ]
+    }
+  },
+  "tools": [
+    { "name": "ficha_cliente", "description": "Ficha 360 do cliente por CNPJ ou razao social." },
+    { "name": "situacao_nps", "description": "Nota, faixa, comentario e data do NPS de um cliente." },
+    { "name": "clientes_inativos", "description": "Gatilho A: antigos sem contato recente, por RFM." },
+    { "name": "clientes_para_contato", "description": "Fila A ou B (preventiva vencida), por RFM." },
+    { "name": "historico_relacionamento", "description": "Linha do tempo dos sinais de engajamento." },
+    { "name": "estimar_servico", "description": "Estimativa de servico (nao calibrada na Fase 1)." },
+    { "name": "consultar_wiki", "description": "Consulta a wiki (tom, tratativas, perguntas, principios)." },
+    { "name": "salvar_documento_docx", "description": "Salva o plano/resposta como Word .docx (via Apache POI, sem Python)." },
+    { "name": "recarregar_dados", "description": "Recarrega os .xlsx da pasta de dados." }
+  ],
+  "user_config": {
+    "java_path": {
+      "type": "string",
+      "title": "Comando/caminho do Java 21",
+      "description": "Use 'java' se o Java 21 estiver no PATH, ou o caminho completo do java.exe (ex.: C:\\Program Files\\Java\\jdk-21\\bin\\java.exe).",
+      "default": "java",
+      "required": true
+    },
+    "fonte_dir": {
+      "type": "directory",
+      "title": "Pasta de fontes (.xlsx)",
+      "description": "Onde o MCP LE os exports N1/Megazap/People/NPS. O padrao usa as planilhas ficticias que acompanham a extensao (funciona de imediato). Para dados reais, aponte para uma pasta sua - sugestao: C:/Users/SEU-USUARIO/MilleniumAgenteIA/fonte ou uma pasta compartilhada do time.",
+      "default": "${__dirname}/fonte",
+      "required": false
+    },
+    "wiki_dir": {
+      "type": "directory",
+      "title": "Pasta da wiki (Markdown editavel)",
+      "description": "Se apontar para uma pasta com .md, o MCP usa essa wiki (editavel sem rebuild). Se vazia/inexistente, usa a wiki embutida na extensao. Sugestao: C:/Users/SEU-USUARIO/MilleniumAgenteIA/wiki.",
+      "default": "${HOME}/MilleniumAgenteIA/wiki",
+      "required": false
+    },
+    "output_dir": {
+      "type": "directory",
+      "title": "Pasta de saida (.docx)",
+      "description": "Onde o MCP salva os documentos Word gerados (planos do Preventivo, respostas do Pos-NPS).",
+      "default": "${HOME}/MilleniumAgenteIA/saidas",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"]
+  }
+}

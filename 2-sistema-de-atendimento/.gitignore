@@ -1,0 +1,7 @@
+target/
+logs/
+.tools/
+*.bak-*
+*.iml
+.idea/
+# os Excel (ficticios) ficam versionados em fonte/ e a wiki editavel em wiki/ - o MCP apenas os le.
