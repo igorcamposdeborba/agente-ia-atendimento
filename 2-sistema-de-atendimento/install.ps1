@@ -26,7 +26,10 @@
 [CmdletBinding()]
 param(
     [switch]$SkipBuild,
-    [switch]$NoOpenFolder
+    [switch]$NoOpenFolder,
+    # Caminho do JDK 21 ja instalado, para pular a busca/winget. Ex.:
+    #   install.cmd -JavaHome "C:\Program Files\Java\jdk-21"
+    [string]$JavaHome
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,32 +41,67 @@ function Write-Ok($msg)    { Write-Host "    [OK] $msg" -ForegroundColor Green }
 function Write-Warn2($msg) { Write-Host "    [!]  $msg" -ForegroundColor Yellow }
 function Write-Info($msg)  { Write-Host "    $msg" -ForegroundColor Gray }
 
-function Get-JavaMajor([string]$javaExe) {
+# Roda 'java -XshowSettings:properties -version' UMA vez e devolve @{ Major=<int>; Home=<string> }.
+# Este e o metodo confiavel: le as propriedades java.version/java.home (que independem do banner
+# e resolvem shims como o javapath da Oracle), em vez de parsear o texto do -version no stderr.
+function Get-JavaProps([string]$javaExe) {
+    $res = @{ Major = 0; Home = $null }
     try {
-        $line = (& $javaExe -version 2>&1 | Select-Object -First 1) -join ' '
+        $out = (& $javaExe -XshowSettings:properties -version 2>&1 | Out-String)
+    } catch { return $res }
+    if ($out -match 'java\.home\s*=\s*(.+)') { $res.Home = $Matches[1].Trim() }
+    if ($out -match 'java\.version\s*=\s*"?(\d+)(?:\.(\d+))?') {
+        $mj = [int]$Matches[1]
+        if ($mj -eq 1 -and $Matches[2]) { $mj = [int]$Matches[2] }  # 1.8 -> 8
+        $res.Major = $mj
+    }
+    return $res
+}
+
+function Get-JavaMajor([string]$javaExe) {
+    # 1o via propriedades (robusto contra "Picked up JAVA_TOOL_OPTIONS" e shims).
+    $mj = (Get-JavaProps $javaExe).Major
+    if ($mj -gt 0) { return $mj }
+    # fallback: parseia o banner do -version (varre TODA a saida, nao so a 1a linha).
+    try {
+        $out = (& $javaExe -version 2>&1 | Out-String)
     } catch { return 0 }
-    if ($line -match 'version "(\d+)(?:\.(\d+))?') {
+    if ($out -match 'version "(\d+)(?:\.(\d+))?') {
         $major = [int]$Matches[1]
         if ($major -eq 1 -and $Matches[2]) { $major = [int]$Matches[2] }  # 1.8 -> 8
         return $major
     }
+    # alguns builds imprimem "openjdk 21.0.2" sem aspas (formato --version)
+    if ($out -match '(?:^|\s)(\d+)\.\d+\.\d+') { return [int]$Matches[1] }
     return 0
+}
+
+# Descobre o JAVA_HOME real de um java.exe (resolve shims como o javapath da Oracle).
+function Get-JavaHomeFromExe([string]$javaExe) {
+    return (Get-JavaProps $javaExe).Home
 }
 
 # Procura um JDK >= 21 em locais comuns e no JAVA_HOME/PATH. Retorna o diretorio (JAVA_HOME).
 function Find-Jdk21 {
     $candidates = @()
     if ($env:JAVA_HOME) { $candidates += $env:JAVA_HOME }
+    # Raizes comuns por fornecedor + JDKs do IntelliJ (~/.jdks) + Program Files (x86).
     $roots = @(
         "$env:ProgramFiles\Microsoft",
         "$env:ProgramFiles\Eclipse Adoptium",
         "$env:ProgramFiles\Java",
         "$env:ProgramFiles\Zulu",
-        "$env:ProgramFiles\Amazon Corretto"
+        "$env:ProgramFiles\Amazon Corretto",
+        "$env:ProgramFiles\BellSoft",
+        "$env:ProgramFiles\Semeru",
+        "${env:ProgramFiles(x86)}\Java",
+        "$env:LOCALAPPDATA\Programs\Eclipse Adoptium",
+        "$env:USERPROFILE\.jdks"
     )
     foreach ($r in $roots) {
-        if (Test-Path $r) {
-            $candidates += (Get-ChildItem -Path $r -Directory -Filter 'jdk*' -ErrorAction SilentlyContinue |
+        if ($r -and (Test-Path $r)) {
+            # Sem filtro 'jdk*': aceita corretto-21, temurin-21, openjdk-21 etc.
+            $candidates += (Get-ChildItem -Path $r -Directory -ErrorAction SilentlyContinue |
                 Sort-Object Name -Descending | ForEach-Object { $_.FullName })
         }
     }
@@ -73,22 +111,73 @@ function Find-Jdk21 {
             if ((Get-JavaMajor $exe) -ge 21) { return $c }
         }
     }
-    # por ultimo, o java do PATH
+    # Varre cada diretorio do PATH atual atras de um java.exe (cobre instalacoes fora das
+    # raizes acima, desde que estejam no PATH herdado pelo processo).
+    foreach ($dir in ($env:Path -split ';')) {
+        if (-not $dir) { continue }
+        $exe = Join-Path $dir 'java.exe'
+        if (Test-Path $exe) {
+            if ((Get-JavaMajor $exe) -ge 21) {
+                $jh = Get-JavaHomeFromExe $exe
+                if ($jh -and (Test-Path (Join-Path $jh 'bin\java.exe'))) { return $jh }
+                return (Split-Path $dir -Parent)   # <dir>=...\bin -> JAVA_HOME
+            }
+        }
+    }
+    # por ultimo, o java do PATH via Get-Command (o mesmo que voce roda no terminal).
+    # E o caso classico do Oracle javapath: 'java --version' mostra 21, mas o Source e um
+    # shim em ...\Common Files\Oracle\Java\javapath\java.exe. Uma unica chamada de
+    # Get-JavaProps devolve versao E java.home reais.
     $onPath = Get-Command java.exe -ErrorAction SilentlyContinue
-    if ($onPath -and (Get-JavaMajor $onPath.Source) -ge 21) {
-        return (Split-Path (Split-Path $onPath.Source -Parent) -Parent)
+    if (-not $onPath) { $onPath = Get-Command java -ErrorAction SilentlyContinue }
+    if ($onPath) {
+        $props = Get-JavaProps $onPath.Source
+        if ($props.Major -ge 21 -and $props.Home -and (Test-Path (Join-Path $props.Home 'bin\java.exe'))) {
+            return $props.Home
+        }
     }
     return $null
 }
 
 function Ensure-Jdk21 {
     Write-Step 'Verificando JDK 21'
+
+    # 1) Caminho informado explicitamente (-JavaHome) tem prioridade. Aceita tres formas:
+    #    a) a raiz do JDK   (tem bin\java.exe)          -> ex.: C:\Program Files\Java\jdk-21.0.2
+    #    b) a pasta bin     (tem java.exe direto)       -> ex.: C:\Program Files\Java\jdk-21.0.2\bin
+    #    c) uma pasta-mae   (contem subpastas jdk-*)    -> ex.: C:\Program Files\Java
+    if ($JavaHome) {
+        $tries = @($JavaHome)
+        if (Test-Path $JavaHome) {
+            $tries += (Get-ChildItem -Path $JavaHome -Directory -ErrorAction SilentlyContinue |
+                Sort-Object Name -Descending | ForEach-Object { $_.FullName })
+        }
+        foreach ($t in $tries) {
+            $exe = Join-Path $t 'bin\java.exe'
+            if ((Test-Path $exe) -and (Get-JavaMajor $exe) -ge 21) {
+                Write-Ok "JDK 21 (via -JavaHome): $t"; return $t
+            }
+            $exeBin = Join-Path $t 'java.exe'   # caso $t seja a propria pasta bin
+            if ((Test-Path $exeBin) -and (Get-JavaMajor $exeBin) -ge 21) {
+                $jh = Split-Path $t -Parent
+                Write-Ok "JDK 21 (via -JavaHome): $jh"; return $jh
+            }
+        }
+        Write-Warn2 "-JavaHome informado ('$JavaHome') nao tem um java.exe 21+ valido; tentando detectar."
+    }
+
+    # 2) Deteccao automatica (JAVA_HOME, raizes de fornecedores, PATH).
     $home21 = Find-Jdk21
     if ($home21) { Write-Ok "JDK 21 encontrado: $home21"; return $home21 }
 
-    Write-Warn2 'JDK 21 nao encontrado. Instalando via winget (Microsoft.OpenJDK.21)...'
+    # 3) Nao achou NESTE contexto. Se voce ja tem Java 21 (aparece em 'java --version'),
+    #    quase sempre e PATH: rode na MESMA PowerShell onde o java funciona, ou passe -JavaHome.
+    Write-Warn2 'JDK 21 nao encontrado neste contexto (PATH/perfil do processo).'
+    Write-Info  'Ja tem Java 21? Rode a partir da PowerShell onde "java --version" funciona,'
+    Write-Info  'ou informe o caminho:  install.cmd -JavaHome "C:\caminho\do\jdk-21"'
+    Write-Warn2 'Tentando instalar via winget (Microsoft.OpenJDK.21) como ultimo recurso...'
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        throw "winget indisponivel. Instale o 'Microsoft OpenJDK 21' manualmente e rode de novo."
+        throw "winget indisponivel e Java 21 nao localizado. Rode na PowerShell onde 'java --version' funciona, ou use -JavaHome ""C:\caminho\do\jdk-21""."
     }
     winget install --id Microsoft.OpenJDK.21 -e --silent `
         --accept-package-agreements --accept-source-agreements | Out-Host

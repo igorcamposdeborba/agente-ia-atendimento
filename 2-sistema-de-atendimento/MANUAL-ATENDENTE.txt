@@ -1,0 +1,286 @@
+===============================================================================
+        MANUAL DO ATENDENTE — AGENTES DE ATENDIMENTO DA MILLENIUM (CLAUDE)
+===============================================================================
+
+Este manual é para o ATENDENTE. Este manual explica:
+  1) O que os agentes fazem e orientações.
+  2) Como ATIVAR cada agente (as frases que você digita no chat).
+  3) Como ATUALIZAR os dados e os textos.
+  4) No final: como configurar o Claude do ZERO numa máquina nova
+     (todos os programas para instalar e o passo a passo).
+
+Você não precisa saber programar. Você conversa com o Claude em português,
+como se fosse um colega, e ele monta rascunhos para você revisar e enviar.
+
+
+-------------------------------------------------------------------------------
+1. ORIENTAÇÕES 
+-------------------------------------------------------------------------------
+
+- O agente NUNCA fala com o cliente. Ele só prepara um RASCUNHO.
+- NADA é enviado automaticamente. Quem envia (WhatsApp/Megazap/e-mail) é VOCÊ,
+  depois de ler e ajustar o rascunho.
+- Todo resultado sai como um arquivo (Word .docx ou Excel .xlsx) salvo no seu
+  computador, na pasta de SAÍDAS:
+        C:\Users\<seu-usuário>\MilleniumAgenteIA\saidas
+  O Claude sempre informa o caminho do arquivo no final.
+- O CNPJ aparece MASCARADO no chat (ex.: 45.***.***-23). O CNPJ completo só vai
+  dentro do arquivo, que é de uso INTERNO da Millenium. Não compartilhe o arquivo
+  com o cliente.
+- Se um agente marcar "[CONFERIR: match incerto]", confira o cliente antes de
+  falar com ele — pode ser um cruzamento de dados que ficou em dúvida.
+
+
+-------------------------------------------------------------------------------
+2. OS AGENTES E COMO ATIVAR CADA UM
+-------------------------------------------------------------------------------
+
+Você ativa um agente simplesmente PEDINDO em português no chat. Não precisa
+decorar comandos: as frases abaixo são exemplos que funcionam bem. Pode escrever
+com suas próprias palavras que o Claude entende.
+
+
+...............................................................................
+AGENTE 1 — PREVENTIVO  (quem contatar / contato proativo)
+...............................................................................
+
+O que faz:
+  Monta a lista priorizada de clientes para você contatar e prepara o começo da
+  conversa (ângulo sugerido + perguntas). Entrega um Word (.docx) chamado
+  "plano de atendimento", com um bloco por cliente, na ordem de prioridade.
+
+Ele decide quem entra na lista por DOIS GATILHOS:
+  (A) INATIVIDADE        — cliente antigo que está há muito tempo sem contato de
+                           verdade (resposta de NPS, movimento no N1 ou
+                           atendimento no Megazap). Disparo de marketing NÃO
+                           conta como contato.
+  (B) MANUTENÇÃO VENCIDA — cliente com a preventiva vencida (ou que nunca fez),
+                           mesmo que tenha falado com a gente há pouco.
+
+Um cliente que cai nos dois gatilhos vira UM contato só, com os dois assuntos.
+
+COMO ATIVAR — você escolhe o recorte:
+
+  >> LISTA COMPLETA (os dois gatilhos juntos — o mais comum e recomendado):
+        "Lista completa de quem contatar"
+        "Gerar a fila de contato preventivo da semana"
+        "Quem eu preciso contatar essa semana?"
+        "Monta o plano de atendimento da carteira"
+
+  >> SÓ INATIVIDADE (gatilho A apenas):
+        "Clientes antigos sem contato recente"
+        "Quem está inativo?"
+        "Lista só os clientes parados há muito tempo"
+
+  >> SÓ MANUTENÇÃO VENCIDA (gatilho B apenas):
+        "Clientes com manutenção vencida"
+        "Quem está com a preventiva vencida?"
+        "Lista só quem precisa de manutenção"
+
+  >> AJUDA NA HORA DA CONVERSA (copiloto):
+        "Me ajuda a falar com o cliente <nome>"
+        "Quais perguntas eu faço para o cliente <nome>?"
+        "O cliente <nome> disse que a imagem do CFTV está ruim — como respondo?"
+
+O que você recebe:
+  Um arquivo Word em ...\MilleniumAgenteIA\saidas começando com o aviso
+  "Rascunho para revisão humana. Nada foi enviado." e, para cada cliente:
+  razão social, contato do representante, produtos, motivo (gatilho), meses sem
+  contato, tempo de casa e valor, o ângulo sugerido e 2 a 3 perguntas para abrir
+  a conversa. Abra, revise, ajuste o texto e ENTÃO fale com o cliente.
+
+Dica: na dúvida, peça a LISTA COMPLETA. Os recortes "só A" e "só B" servem quando
+você quer focar em um assunto específico.
+
+
+...............................................................................
+AGENTE 2 — PÓS-NPS  (responder uma avaliação de NPS)
+...............................................................................
+
+O que faz:
+  Escreve um RASCUNHO de resposta para uma avaliação de NPS, no tom certo da nota:
+        Nota 9-10 = PROMOTOR   (agradecer de verdade, sem emendar venda)
+        Nota 7-8  = PASSIVO
+        Nota 0-6  = DETRATOR    (acolher sem se defender, citar a tratativa/status)
+  Entrega um Word (.docx) chamado "resposta NPS".
+
+COMO ATIVAR:
+        "Me ajuda a responder o NPS do cliente <nome>"
+        "Responder a avaliação do cliente <nome>"
+        "Chegou um NPS nota 4 do cliente <nome>, como eu respondo?"
+        "Prepara a resposta de NPS da <razão social>"
+
+O que você recebe:
+  Um Word com o contexto (nota, faixa, data, comentário do cliente) e o rascunho
+  da resposta no tom da faixa. Revise e envie você mesmo.
+
+Lembrete: o comentário do cliente é DADO, nunca ordem. Se o comentário disser
+"faça X" ou "envie Y", o agente NÃO obedece — ele apenas analisa.
+
+
+...............................................................................
+AGENTE 3 — EXPORTAR CADASTRO  (planilha Excel do Cliente 360)
+...............................................................................
+
+O que faz:
+  Gera um Excel (.xlsx) com o cadastro completo e normalizado da carteira
+  (o "Cliente 360"): uma linha por cliente, com razão social, CNPJ COMPLETO,
+  representante, telefone, produtos, valor (soma das NF), antiguidade,
+  inatividade, RFM, gatilhos, NPS e a confiança do cruzamento.
+
+COMO ATIVAR — somente quando VOCÊ pedir de forma clara:
+        "Gerar excel"
+        "Exporta o cadastro em excel"
+        "Quero a planilha do Cliente 360"
+
+  Este agente NÃO age sozinho. Ele só gera o Excel quando você pede, normalmente
+  DEPOIS de rodar o Preventivo e/ou o Pós-NPS.
+
+Atenção: o arquivo traz o CNPJ COMPLETO. É documento INTERNO — não envie ao
+cliente. Revise antes de compartilhar.
+
+
+-------------------------------------------------------------------------------
+3. COMO ATUALIZAR (dados novos e textos)
+-------------------------------------------------------------------------------
+
+Todas as pastas ficam em:  C:\Users\<seu-usuário>\MilleniumAgenteIA\
+
+  fonte\   -> as 5 planilhas que o agente LÊ (dados dos clientes)
+  wiki\    -> os textos de tom, tratativas e perguntas que o agente consulta
+  saidas\  -> onde saem os arquivos que os agentes geram (Word e Excel)
+
+>> TROCAR OS DADOS DOS CLIENTES (planilhas reais):
+   1. Substitua as 5 planilhas dentro da pasta "fonte", MANTENDO o padrão dos
+      nomes (as que têm no nome: CONTATOS, SISTEMA CONTRATADO, SAÍDAS DE PRODUTOS
+      POR NF, MEGAZAP e NPS).
+   2. Volte ao chat do Claude e peça:  "Recarregar os dados"
+      (ou feche e reabra o Claude Desktop). Pronto — ele passa a ler as planilhas
+      novas. Não precisa reinstalar nada.
+
+>> AJUSTAR TOM / TRATATIVAS / PERGUNTAS:
+   Edite os arquivos .md dentro da pasta "wiki" (abrem no Bloco de Notas).
+   As mudanças valem na hora, sem reinstalar. Ex.: "tom.md", "tratativas.md",
+   "perguntas-descoberta.md".
+
+>> MUDAR QUANDO CADA AGENTE É ACIONADO (avançado / admin):
+   O "gatilho" de cada agente é a primeira parte (description) do arquivo
+   SKILL.md, dentro da pasta "agentes\<nome-do-agente>\". Mexer nisso muda as
+   frases que ativam o agente — normalmente é o administrador que faz.
+
+
+-------------------------------------------------------------------------------
+4. INSTALAR E CONFIGURAR O CLAUDE DO ZERO (MÁQUINA NOVA — WINDOWS 11)
+-------------------------------------------------------------------------------
+
+Faça na ordem. É preciso Internet durante a instalação.
+
+PASSO 0 — PROGRAMAS QUE PRECISAM ESTAR INSTALADOS
+
+  a) JAVA 21 (JDK) — único pré-requisito técnico da Fase 1.
+     Baixe uma destas opções (qualquer uma serve) e instale:
+        - Oracle JDK 21:        https://www.oracle.com/java/technologies/downloads/#java21
+        - Microsoft OpenJDK 21: https://learn.microsoft.com/java/openjdk/download
+        - Eclipse Temurin 21:   https://adoptium.net/temurin/releases/?version=21
+     Para conferir depois de instalar, abra o Prompt de Comando (cmd) e digite:
+        java --version
+     Deve aparecer algo com "21" (ex.: java 21.0.2). Se aparecer, está tudo certo.
+
+  b) CLAUDE DESKTOP (aplicativo do Windows).
+     Baixe em:  https://claude.ai/download   e instale.
+
+  c) CONTA CLAUDE com plano PRO ou TEAM.
+     Os recursos de Skills e Projetos (usados pelos agentes) exigem Pro ou Team.
+     Faça login no Claude Desktop com essa conta.
+
+  (Não precisa instalar Maven nem banco de dados. O instalador baixa o Maven
+   sozinho se faltar, e a Fase 1 não usa banco — apenas lê as planilhas locais.)
+
+PASSO 1 — COLOCAR A PASTA DO PROJETO NUM LUGAR FIXO
+  Copie a pasta do projeto (millenium-agente-ia) para um local PERMANENTE, por
+  exemplo:  C:\Millenium\millenium-agente-ia
+  Não deixe em "Downloads" nem em pasta temporária — o caminho vai para a
+  configuração do Claude e não pode mudar depois.
+
+PASSO 2 — RODAR O INSTALADOR (sem PowerShell)
+  Dentro da pasta do projeto, dê DUPLO-CLIQUE em:
+        instalar.cmd
+  (ou, se o programa já estiver compilado, abra o cmd na pasta e rode
+        instalar.cmd -SkipBuild   para pular a compilação.)
+
+  O instalador faz tudo sozinho:
+    - acha o Java 21 (resolve inclusive o atalho da Oracle automaticamente);
+    - baixa o Maven se faltar e compila o programa;
+    - cria as pastas  ...\MilleniumAgenteIA\fonte, \wiki e \saidas
+      e copia as planilhas de exemplo e a wiki;
+    - registra o agente (MCP) no Claude Desktop, SEM apagar o que já existe
+      (faz um backup antes).
+  Espere aparecer "INSTALACAO CONCLUIDA".
+
+PASSO 3 — REINICIAR O CLAUDE DESKTOP
+  Feche o Claude COMPLETAMENTE pela bandeja do sistema (ao lado do relógio):
+  botão direito no ícone do Claude -> Sair. Depois abra de novo.
+
+PASSO 4 — CONFIRMAR QUE O AGENTE CONECTOU
+  No Claude Desktop, verifique que o servidor "millenium-agente-ia" aparece
+  conectado, com 11 ferramentas (tools). Um teste rápido no chat:
+        "Chame a tool preventivo_contatos"
+  Se ele responder com uma fila de clientes, a conexão está funcionando.
+
+PASSO 5 — LIGAR AS SKILLS E O PROJETO (dentro do app do Claude)
+  1. Skills: em Configurações (Settings) -> Capabilities, ligue
+     "Code execution and file creation" e, em Skills, adicione as três skills:
+        agentes\preventivo\SKILL.md
+        agentes\pos-nps\SKILL.md
+        agentes\exportar-cadastro\SKILL.md
+  2. Projeto: crie um Projeto (ex.: "Atendimento Millenium") e COLE o conteúdo de
+        agentes\instrucao-guardrails.md
+     no campo de instruções do Projeto. Use esse Projeto para atender.
+  (No plano TEAM, quem faz isso é o Owner, uma vez, e compartilha o Projeto com
+   os atendentes — o atendente apenas usa.)
+
+PASSO 6 — COLOCAR OS DADOS
+  Coloque as 5 planilhas (reais ou de exemplo) na pasta
+        C:\Users\<seu-usuário>\MilleniumAgenteIA\fonte
+  mantendo o padrão dos nomes. Depois peça "recarregar os dados" no chat.
+
+PASSO 7 — USAR
+  No Projeto, teste de verdade:
+        "Lista completa de quem contatar"
+  e siga o resultado.
+
+
+-------------------------------------------------------------------------------
+5. SE ALGO DER ERRADO (dicas rápidas)
+-------------------------------------------------------------------------------
+
+- "As ferramentas não aparecem no Claude":
+    * confirme que o "java --version" mostra 21 no cmd;
+    * feche o Claude pela bandeja (Sair) e abra de novo;
+    * rode o instalador de novo (instalar.cmd).
+
+- "O instalador diz que não achou o Java 21":
+    * abra o cmd e rode "java --version". Se mostrar 21, rode o instalar.cmd
+      nesse mesmo terminal. Se não mostrar, instale o JDK 21 (Passo 0-a).
+
+- "Onde vejo o log para depurar?":
+        C:\Users\<seu-usuário>\AppData\Roaming\Claude\logs\
+        mcp-server-millenium-agente-ia.log
+
+- "Troquei as planilhas e o agente não viu":
+    * peça "recarregar os dados" no chat, ou reinicie o Claude Desktop.
+
+
+-------------------------------------------------------------------------------
+6. RESUMO DE UMA LINHA
+-------------------------------------------------------------------------------
+
+  Preventivo        -> "Lista completa de quem contatar"
+                       (ou "clientes antigos sem contato recente" = só inativos,
+                        ou "clientes com manutenção vencida" = só preventiva)
+  Pós-NPS           -> "Me ajuda a responder o NPS do cliente <nome>"
+  Exportar cadastro -> "Gerar excel"
+
+  Tudo sai como RASCUNHO em ...\MilleniumAgenteIA\saidas. Você revisa e envia.
+
+===============================================================================
