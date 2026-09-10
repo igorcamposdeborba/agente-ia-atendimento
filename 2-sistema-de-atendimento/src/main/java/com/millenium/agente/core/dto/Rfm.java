@@ -6,9 +6,9 @@ package com.millenium.agente.core.dto;
  * media ponderada usada para priorizar quem contatar primeiro.
  */
 public record Rfm(
-        int recencia,       // 5 = muito inativo (mais urgente de reativar)
-        int antiguidade,    // 5 = cliente muito antigo
-        int monetizacao,    // 5 = contrato de maior valor
+        int recency,        // 5 = muito inativo (mais urgente de reativar)
+        int tenure,         // 5 = cliente muito antigo
+        int monetization,   // 5 = contrato de maior valor
         double score        // media ponderada (0-5)
 ) {
 }

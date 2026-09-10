@@ -33,49 +33,49 @@ public class MarkdownWikiAdapter implements WikiPort {
 
     private static final Logger log = LoggerFactory.getLogger(MarkdownWikiAdapter.class);
 
-    private final Map<String, String> documentos = new LinkedHashMap<>();
+    private final Map<String, String> documents = new LinkedHashMap<>();
 
     public MarkdownWikiAdapter(MilleniumProperties props) {
-        carregar(props.getWikiDir());
+        load(props.getWikiDir());
     }
 
-    private void carregar(String wikiDir) {
-        if (carregarDoDisco(wikiDir)) {
-            log.info("Wiki carregada da pasta externa {}: {} documento(s) {}", wikiDir, documentos.size(), documentos.keySet());
+    private void load(String wikiDir) {
+        if (loadFromDisk(wikiDir)) {
+            log.info("Wiki carregada da pasta externa {}: {} documento(s) {}", wikiDir, documents.size(), documents.keySet());
             return;
         }
-        carregarDoClasspath();
-        log.info("Wiki carregada do jar (classpath:wiki/): {} documento(s) {}", documentos.size(), documentos.keySet());
+        loadFromClasspath();
+        log.info("Wiki carregada do jar (classpath:wiki/): {} documento(s) {}", documents.size(), documents.keySet());
     }
 
-    private boolean carregarDoDisco(String wikiDir) {
+    private boolean loadFromDisk(String wikiDir) {
         if (wikiDir == null || wikiDir.isBlank()) return false;
         Path dir = Path.of(wikiDir);
         if (!Files.isDirectory(dir)) return false;
-        Map<String, String> encontrados = new LinkedHashMap<>();
+        Map<String, String> found = new LinkedHashMap<>();
         try (Stream<Path> s = Files.walk(dir)) {
             for (Path p : (Iterable<Path>) s::iterator) {
                 if (Files.isRegularFile(p) && p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".md")) {
-                    encontrados.put(p.getFileName().toString(), Files.readString(p, StandardCharsets.UTF_8));
+                    found.put(p.getFileName().toString(), Files.readString(p, StandardCharsets.UTF_8));
                 }
             }
         } catch (IOException e) {
             log.warn("Falha ao ler a wiki externa {}: {}", wikiDir, e.getMessage());
             return false;
         }
-        if (encontrados.isEmpty()) return false;
-        documentos.putAll(encontrados);
+        if (found.isEmpty()) return false;
+        documents.putAll(found);
         return true;
     }
 
-    private void carregarDoClasspath() {
+    private void loadFromClasspath() {
         try {
             var resolver = new PathMatchingResourcePatternResolver();
-            Resource[] recursos = resolver.getResources("classpath*:wiki/**/*.md");
-            for (Resource r : recursos) {
-                String nome = r.getFilename();
-                if (nome == null) continue;
-                documentos.put(nome, new String(r.getContentAsByteArray(), StandardCharsets.UTF_8));
+            Resource[] resources = resolver.getResources("classpath*:wiki/**/*.md");
+            for (Resource r : resources) {
+                String name = r.getFilename();
+                if (name == null) continue;
+                documents.put(name, new String(r.getContentAsByteArray(), StandardCharsets.UTF_8));
             }
         } catch (Exception e) {
             log.error("Falha ao carregar a wiki do jar: {}", e.getMessage(), e);
@@ -83,50 +83,50 @@ public class MarkdownWikiAdapter implements WikiPort {
     }
 
     @Override
-    public List<String> listarDocumentos() {
-        return List.copyOf(documentos.keySet());
+    public List<String> listDocuments() {
+        return List.copyOf(documents.keySet());
     }
 
     @Override
-    public Optional<String> buscarDocumento(String nome) {
-        if (nome == null) return Optional.empty();
-        String alvo = nome.toLowerCase(Locale.ROOT);
-        return documentos.entrySet().stream()
-                .filter(e -> e.getKey().toLowerCase(Locale.ROOT).equals(alvo)
-                        || e.getKey().toLowerCase(Locale.ROOT).equals(alvo + ".md")
-                        || e.getKey().toLowerCase(Locale.ROOT).contains(alvo))
+    public Optional<String> findDocument(String name) {
+        if (name == null) return Optional.empty();
+        String target = name.toLowerCase(Locale.ROOT);
+        return documents.entrySet().stream()
+                .filter(e -> e.getKey().toLowerCase(Locale.ROOT).equals(target)
+                        || e.getKey().toLowerCase(Locale.ROOT).equals(target + ".md")
+                        || e.getKey().toLowerCase(Locale.ROOT).contains(target))
                 .map(Map.Entry::getValue)
                 .findFirst();
     }
 
     @Override
-    public String buscar(String consulta) {
-        if (consulta == null || consulta.isBlank()) {
-            return "Documentos disponiveis na wiki: " + String.join(", ", listarDocumentos());
+    public String search(String query) {
+        if (query == null || query.isBlank()) {
+            return "Documentos disponiveis na wiki: " + String.join(", ", listDocuments());
         }
-        String[] termos = consulta.toLowerCase(Locale.ROOT).split("\\s+");
-        List<String> achados = new ArrayList<>();
-        for (var doc : documentos.entrySet()) {
-            for (String paragrafo : doc.getValue().split("\\n\\s*\\n")) {
-                String p = paragrafo.toLowerCase(Locale.ROOT);
-                boolean casa = false;
-                for (String t : termos) {
+        String[] terms = query.toLowerCase(Locale.ROOT).split("\\s+");
+        List<String> matches = new ArrayList<>();
+        for (var doc : documents.entrySet()) {
+            for (String paragraph : doc.getValue().split("\\n\\s*\\n")) {
+                String p = paragraph.toLowerCase(Locale.ROOT);
+                boolean matched = false;
+                for (String t : terms) {
                     if (t.length() > 2 && p.contains(t)) {
-                        casa = true;
+                        matched = true;
                         break;
                     }
                 }
-                if (casa) {
-                    achados.add("### " + doc.getKey() + "\n" + paragrafo.strip());
-                    if (achados.size() >= 8) break;
+                if (matched) {
+                    matches.add("### " + doc.getKey() + "\n" + paragraph.strip());
+                    if (matches.size() >= 8) break;
                 }
             }
-            if (achados.size() >= 8) break;
+            if (matches.size() >= 8) break;
         }
-        if (achados.isEmpty()) {
-            return "Nada encontrado na wiki para \"" + consulta + "\". Documentos: "
-                    + String.join(", ", listarDocumentos());
+        if (matches.isEmpty()) {
+            return "Nada encontrado na wiki para \"" + query + "\". Documentos: "
+                    + String.join(", ", listDocuments());
         }
-        return String.join("\n\n", achados);
+        return String.join("\n\n", matches);
     }
 }

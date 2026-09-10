@@ -9,11 +9,11 @@ import java.util.Optional;
 public interface WikiPort {
 
     /** Nomes dos documentos disponiveis na wiki. */
-    List<String> listarDocumentos();
+    List<String> listDocuments();
 
     /** Conteudo de um documento pelo nome (com ou sem extensao). */
-    Optional<String> buscarDocumento(String nome);
+    Optional<String> findDocument(String name);
 
     /** Busca por termo no conteudo da wiki; retorna trechos relevantes com o documento de origem. */
-    String buscar(String consulta);
+    String search(String query);
 }

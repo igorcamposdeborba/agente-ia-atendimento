@@ -22,13 +22,13 @@ public class WikiTools {
             description = "Consulta a wiki de atendimento (tom, tratativas, principios, perguntas de "
                     + "descoberta). Passe um termo para buscar trechos, ou o nome de um documento para "
                     + "ler o conteudo completo. Sem argumento, lista os documentos disponiveis.")
-    public String consultarWiki(
+    public String consultWiki(
             @ToolParam(required = false, description = "termo de busca ou nome de um documento da wiki") String consulta) {
         if (consulta == null || consulta.isBlank()) {
-            return "Documentos da wiki: " + String.join(", ", wiki.listarDocumentos());
+            return "Documentos da wiki: " + String.join(", ", wiki.listDocuments());
         }
         // Se casar exatamente com um documento, devolve o conteudo completo.
-        return wiki.buscarDocumento(consulta)
-                .orElseGet(() -> wiki.buscar(consulta));
+        return wiki.findDocument(consulta)
+                .orElseGet(() -> wiki.search(consulta));
     }
 }

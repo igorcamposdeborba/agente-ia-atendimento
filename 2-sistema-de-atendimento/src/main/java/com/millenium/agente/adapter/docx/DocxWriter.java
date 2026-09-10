@@ -23,37 +23,37 @@ import java.nio.file.Path;
  */
 public class DocxWriter {
 
-    public Path escrever(Path arquivo, String titulo, String conteudo) {
+    public Path write(Path file, String title, String content) {
         try (XWPFDocument doc = new XWPFDocument()) {
-            if (titulo != null && !titulo.isBlank()) {
-                titulo(doc, titulo);
+            if (title != null && !title.isBlank()) {
+                title(doc, title);
             }
-            if (conteudo != null) {
-                for (String linha : conteudo.split("\r?\n")) {
-                    renderizar(doc, linha);
+            if (content != null) {
+                for (String line : content.split("\r?\n")) {
+                    render(doc, line);
                 }
             }
-            if (arquivo.getParent() != null) Files.createDirectories(arquivo.getParent());
-            try (OutputStream out = Files.newOutputStream(arquivo)) {
+            if (file.getParent() != null) Files.createDirectories(file.getParent());
+            try (OutputStream out = Files.newOutputStream(file)) {
                 doc.write(out);
             }
-            return arquivo.toAbsolutePath();
+            return file.toAbsolutePath();
         } catch (Exception e) {
-            throw new IllegalStateException("Falha ao gerar o .docx " + arquivo + ": " + e.getMessage(), e);
+            throw new IllegalStateException("Falha ao gerar o .docx " + file + ": " + e.getMessage(), e);
         }
     }
 
-    private void titulo(XWPFDocument doc, String texto) {
+    private void title(XWPFDocument doc, String text) {
         XWPFParagraph p = doc.createParagraph();
         p.setAlignment(ParagraphAlignment.LEFT);
         XWPFRun r = p.createRun();
         r.setBold(true);
         r.setFontSize(18);
-        r.setText(texto.strip());
+        r.setText(text.strip());
     }
 
-    private void renderizar(XWPFDocument doc, String linha) {
-        String s = linha.strip();
+    private void render(XWPFDocument doc, String line) {
+        String s = line.strip();
         if (s.isEmpty()) {
             doc.createParagraph();
             return;
@@ -68,39 +68,39 @@ public class DocxWriter {
             XWPFParagraph p = doc.createParagraph();
             p.setIndentationLeft(360);
             XWPFRun r = p.createRun();
-            r.setText("• " + limparMarcacao(s.substring(2)));
+            r.setText("• " + stripMarkup(s.substring(2)));
         } else {
-            paragrafo(doc, s);
+            paragraph(doc, s);
         }
     }
 
-    private void heading(XWPFDocument doc, String texto, int size) {
+    private void heading(XWPFDocument doc, String text, int size) {
         XWPFParagraph p = doc.createParagraph();
         p.setSpacingBefore(120);
         XWPFRun r = p.createRun();
         r.setBold(true);
         r.setFontSize(size);
-        r.setText(limparMarcacao(texto));
+        r.setText(stripMarkup(text));
     }
 
     /** Paragrafo comum; se houver "Rotulo: valor", deixa o rotulo em negrito. */
-    private void paragrafo(XWPFDocument doc, String texto) {
-        String limpo = limparMarcacao(texto);
+    private void paragraph(XWPFDocument doc, String text) {
+        String clean = stripMarkup(text);
         XWPFParagraph p = doc.createParagraph();
-        int idx = limpo.indexOf(':');
+        int idx = clean.indexOf(':');
         if (idx > 0 && idx <= 30) {
-            XWPFRun rotulo = p.createRun();
-            rotulo.setBold(true);
-            rotulo.setText(limpo.substring(0, idx + 1));
-            XWPFRun resto = p.createRun();
-            resto.setText(limpo.substring(idx + 1));
+            XWPFRun label = p.createRun();
+            label.setBold(true);
+            label.setText(clean.substring(0, idx + 1));
+            XWPFRun rest = p.createRun();
+            rest.setText(clean.substring(idx + 1));
         } else {
-            p.createRun().setText(limpo);
+            p.createRun().setText(clean);
         }
     }
 
     /** Remove marcadores Markdown de enfase (** e *) que nao viram formatacao aqui. */
-    private String limparMarcacao(String s) {
+    private String stripMarkup(String s) {
         return s.replace("**", "").strip();
     }
 }

@@ -1,6 +1,8 @@
 # Planejamento de Cruzamento de Dados — Agente de Atendimento com MCP
 ### Millenium Tecnologia · Fase 1 (PoC Excel)
 
+Código: https://github.com/igorcamposdeborba/agente-ia-atendimento
+
 > Documento-irmão do **1‑design‑document** (tecnologia) e do **2‑business** (negócio). Aqui está
 > o **como os dados de cinco planilhas viram uma visão única por cliente (Cliente 360)** — a base
 > sobre a qual os gatilhos (inatividade / preventiva), o RFM e os dois agentes trabalham.
