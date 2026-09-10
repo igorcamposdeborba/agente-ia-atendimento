@@ -1,4 +1,4 @@
-package com.millenium.agente.core.model;
+package com.millenium.agente.core.dto;
 
 /**
  * Pontuacao RFM adaptada ao problema: Recencia (inatividade), "Frequencia" = Antiguidade

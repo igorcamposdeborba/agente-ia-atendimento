@@ -1,7 +1,7 @@
 package com.millenium.agente.core.recencia;
 
-import com.millenium.agente.core.model.FonteSinal;
-import com.millenium.agente.core.model.SinalEngajamento;
+import com.millenium.agente.core.dto.FonteSinal;
+import com.millenium.agente.core.dto.SinalEngajamento;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;

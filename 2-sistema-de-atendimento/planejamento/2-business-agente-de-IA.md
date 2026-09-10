@@ -33,36 +33,34 @@ Duas dimensões, **ambas** necessárias:
 
 **Recência baixa (é "sem contato recente"):**
 
-- Tempo desde o **último sinal de engajamento / conversa** ≥ *limiar* (ex.: **≥ 8–12 meses**). Contam sinais que partem do cliente **ou que registram uma interação real**:  
+- Tempo desde o **último sinal de engajamento do próprio cliente** ≥ *limiar* (ex.: **≥ 8–12 meses**). Contam **só** sinais que partem do cliente ou registram interação real:  
   - **resposta ao NPS** (o cliente respondeu — não que enviamos a pesquisa);  
   - **visita à empresa registrada no N1**;  
   - **atualização cadastral no N1**;  
-  - **atualização/renovação de contrato no N1**;  
-  - **atendimento registrado no Megazap** — o registro do WhatsApp **é uma conversa**, mesmo sem a resposta do cliente linha a linha.
+  - **atualização/renovação de contrato no N1**.
 
 >   
-> **Enviar ≠ conversa.** Um **disparo** unilateral (marketing ou mensagem automática que a Millenium envia sem interação) **não** conta como conversa. Mas o **registro de atendimento no Megazap é uma conversa** e **conta** — não distinguimos “recebida × enviada” dentro do chamado; o próprio registro do atendimento já comprova a interação. Um cliente que só recebeu disparos de marketing — sem atendimento no Megazap, sem resposta de NPS e sem movimento no N1 — **continua inativo**.  
+> **Enviar ≠ contato.** Disparo de mensagem (Megazap, marketing) **não** conta como contato recente. Um cliente que recebeu vários disparos, mas nunca respondeu e não teve movimento no N1, **continua inativo**. Só engajamento do cliente ou registro de interação no N1 reduz a inatividade.  
 >   
-> **Inativo \= Antiguidade alta \+ Recência baixa.** Um cliente novo que ficou quieto ainda não é "antigo sem contato"; um cliente antigo que respondeu ao NPS, teve visita/atualização no N1 ou **um atendimento no Megazap** semana passada não entra por este gatilho.
+> **Inativo \= Antiguidade alta \+ Recência baixa.** Um cliente novo que ficou quieto ainda não é "antigo sem contato"; um cliente antigo que respondeu ao NPS ou teve visita/atualização no N1 semana passada não entra por este gatilho.
 
 ### Gatilho B — Manutenção vencida (independe de recência)
 
-Entra na fila quem tem **preventiva vencida ou nunca realizada** — **mesmo estando em contato recente**. Aqui a recência **não exclui**: um cliente ativo com manutenção atrasada precisa ser acionado para não chegar à falha. O sinal vem do **N1**. *Na Fase 1 não há coluna de preventiva no export — usa-se um **proxy**: sem visita/movimento há ≥ **12 meses** (janela única hoje; por produto quando calibrada em `parametros/limiares.md`).*
+Entra na fila quem tem **preventiva vencida ou nunca realizada** — **mesmo estando em contato recente**. Aqui a recência **não exclui**: um cliente ativo com manutenção atrasada precisa ser acionado para não chegar à falha. O sinal vem do **N1** (janela de preventiva por produto, definida em `parametros/limiares.md`).
 
 >   
 > Um cliente pode disparar **A, B ou os dois**. A fila **deduplica**: um único contato leva os dois assuntos, respeitando o limite de frequência — nunca dois toques para a mesma pessoa.
 
 **Modelo por trás (RFM - Recência, Frequência, Monetização), para priorizar quem contatar primeiro:**
 
-| Eixo                | O que mede                                                                         | Uso na priorização                    |
-|:--------------------|:-----------------------------------------------------------------------------------|:--------------------------------------|
-| **R — Recência**    | Meses desde o último **engajamento do cliente** (resposta NPS ou movimento no N1)  | **Principal.** Define a inatividade   |
-| **A — Antiguidade** | Tempo de casa                                                                      | Recorta "cliente antigo"              |
-| **F — Frequência**  | Nº de compras/chamados/renovações no período                                       | Distingue quem era engajado e esfriou |
-| **V — Valor**       | **Valor da nota fiscal**: soma de todas as NF do cliente (= valor do contrato)     | Prioriza quem tem maior impacto (LTV) |
+| Eixo                | O que mede                                                                        | Uso na priorização                    |
+|:--------------------|:----------------------------------------------------------------------------------|:--------------------------------------|
+| **R — Recência**    | Meses desde o último **engajamento do cliente** (resposta NPS ou movimento no N1) | **Principal.** Define a inatividade   |
+| **A — Antiguidade** | Tempo de casa                                                                     | Recorta "cliente antigo"              |
+| **F — Frequência**  | Nº de compras/chamados/renovações no período                                      | Distingue quem era engajado e esfriou |
+| **V — Valor**       | Valor do contrato / faturamento / ticket-médio                                    | Prioriza quem tem maior impacto (LTV) |
 
-Assim, a fila prioriza **cliente antigo, valioso, que era ativo e ficou muito tempo sem contato** — o de maior retorno. O **valor** vem da **soma de todas as notas fiscais do cliente** (campo `ValorTotalNF`, calculado no backend = valor do contrato). 
-Os **pesos atuais da PoC** são **recência 0,4 · antiguidade 0,3 · valor 0,3**, com antiguidade ≥ **24 meses** e inatividade ≥ **8 meses**. Todos os **limiares e pesos são decisão do comercial** (André/Sandro/Calebe) e ficam em `wiki/parametros.md`.
+Assim, a fila prioriza **cliente antigo, valioso, que era ativo e ficou muito tempo sem contato** — o de maior retorno. Todos os **limiares são decisão do comercial** (André/Sandro/Calebe) e ficam em `wiki/parametros/limiares.md`.
 
 **Segmentação** (define tom e abordagem — não usa NPS como pré-requisito):
 
@@ -122,7 +120,7 @@ Perguntas abertas, sem indução, feitas para o cliente falar. A wiki traz o "co
 
 | Agente         | Gatilho                                                                                 | Tools (dados)                                                                             | Wiki                                                          | Saída                                                                                 |
 |:---------------|:----------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------|:--------------------------------------------------------------|:--------------------------------------------------------------------------------------|
-| **Preventivo** | (A) cliente antigo sem contato recente · (B) manutenção vencida (independe de recência) | `clientes_inativos`, `clientes_para_contato`, `historico_relacionamento`, `ficha_cliente` | `tom/*`, `perguntas-descoberta`, `tratativas/*`, `produtos/*` | **(A)** Documento de clientes a contatar · **(B)** Perguntas \+ respostas na conversa |
+| **Preventivo** | (A) cliente antigo sem contato recente · (B) manutenção vencida (independe de recência) | **push:** `preventivo_contatos` (fila A∪B compilada) · **pull:** `historico_relacionamento`, `ficha_cliente`, `situacao_nps`, `clientes_inativos`, `clientes_para_contato` | `tom/*`, `perguntas-descoberta`, `tratativas/*`, `produtos/*` | **(A)** Documento de clientes a contatar · **(B)** Perguntas \+ respostas na conversa |
 | **Pós-NPS**    | Nova resposta de NPS (quando houver)                                                    | `situacao_nps`, `ficha_cliente`                                                           | `tom/nps-*`, `tratativas/*`                                   | Rascunho no tom da faixa                                                              |
 
 O agente central é o **Preventivo**, movido a dado de contrato (inatividade \+ manutenção).
@@ -137,7 +135,7 @@ atendente**, com a lógica daquele fluxo (gatilho, passos, tools, qual wiki cham
 
 ### 5.1 Saída A — o documento de clientes a contatar
 
-O atendente pede algo como *"gere a lista de clientes para contato preventivo desta semana"*. O agente cruza os **dois gatilhos** — `clientes_inativos` (A) e `clientes_para_contato` (B, manutenção vencida) — **deduplica** e, com `historico_relacionamento`, **produz um documento priorizado** (planilha ou Markdown), por cliente:
+O atendente pede algo como *"gere a lista de clientes para contato preventivo desta semana"*. Aqui vale uma **regra de negócio central: é o backend que compila a fila e a envia à IA**, não a IA que sai buscando. Numa **única chamada** (`preventivo_contatos`), o servidor aplica os **dois gatilhos**, monta a **fila completa (união A ∪ B, deduplicada, priorizada por RFM)** e a devolve **já com o dossiê de cada cliente** — o agente **não escolhe gatilho nem monta a lista**, apenas **formata o documento** com o que recebeu. Assim o resultado é o mesmo em qualquer modelo (não fica refém de a IA escolher uma tool parcial). O documento sai por cliente:
 
 | Coluna                                    | Origem                       | Para quê                                       |
 |:------------------------------------------|:-----------------------------|:-----------------------------------------------|
@@ -151,6 +149,8 @@ O atendente pede algo como *"gere a lista de clientes para contato preventivo de
 
 Esse documento é o entregável que hoje não existe: transforma "temos que falar com os clientes" em uma **fila priorizada e justificada**.
 
+> **Push (fila enviada) + pull (consulta aberta).** O backend **empurra** a fila completa pelo `preventivo_contatos`; a partir dela, o agente fica **livre para consultar sob demanda** (`ficha_cliente`, `historico_relacionamento`, `situacao_nps`, `estimar_servico`, `consultar_wiki`) para aprofundar um cliente ou **confirmar um match incerto**. Regra única: a consulta **enriquece** a fila, **nunca a substitui nem reduz** — quem define *quem entra* é o backend, pelos gatilhos.
+
 ### 5.2 Saída B — copiloto de conversa (perguntas e respostas)
 
 Durante o contato, o atendente usa o agente em dois momentos:
@@ -160,20 +160,26 @@ Durante o contato, o atendente usa o agente em dois momentos:
 
 Isso estrutura o atendimento em tempo real, mantendo o tom e evitando que cada atendente improvise sozinho.
 
-### 5.3 Novas tools (camada MCP)
+### 5.3 Tools (camada MCP)
 
-- `clientes_inativos(limite)` → **gatilho A**: clientes antigos sem contato recente, já priorizados por RFM (recência, antiguidade, monetização) e com o segmento e a marca de confiança do cruzamento. "Engajamento" = resposta NPS ou movimento no N1; **disparo enviado não conta**. Os limiares (antiguidade, meses sem engajamento) **não são argumentos da tool** — ficam no servidor (`application.properties` / `wiki/parametros.md`), hoje **24 e 8 meses**.  
-- `clientes_para_contato(preventiva_vencida, limite)` → com `preventiva_vencida=true`, só o **gatilho B** (preventiva vencida — **proxy pela última visita**, janela de **12 meses**); sem o parâmetro, a **união de A e B deduplicada**, priorizada por RFM.  
-- `historico_relacionamento(termo)` → linha do tempo de **engajamento/conversas do cliente** (CNPJ ou razão social como termo): última resposta de NPS, últimas vendas/atualizações de contrato no N1, **atendimentos registrados no Megazap**, contratos ativos/encerrados. **Ignora disparos de marketing** enviados pela Millenium (o atendimento do Megazap, por ser conversa, entra).
-- `ficha_cliente(termo, revelarCnpj)` e `situacao_nps(termo)` → ficha consolidada (Cliente 360) e situação de NPS. CNPJ **mascarado por padrão**.
+**Entrega dirigida (push) — a tool do documento:**
 
-A fila final é a **união de A e B, deduplicada** (um cliente que dispara os dois aparece uma vez, com os dois assuntos). Reaproveita `ficha_cliente`. O documento é gravado em `.docx` pela tool `salvar_documento_docx` (Apache POI). O detalhe do cruzamento que sustenta essas tools está no **3‑cruzamento‑de‑dados**.
+- `preventivo_contatos()` → o **backend compila e envia** a **fila completa**: aplica os dois gatilhos, faz a **união A ∪ B deduplicada**, prioriza por RFM e devolve **numa única chamada** o **dossiê de cada cliente** (cadastro, produtos, valor, antiguidade/inatividade, gatilho(s), RFM, NPS, confiança e sinais). É a tool que o agente usa para **gerar o documento** — ele só formata, não escolhe gatilho nem monta a lista.
+
+**Consulta sob demanda (pull) — tools abertas para o agente aprofundar:**
+
+- `clientes_inativos(...)` → consulta do **subconjunto do gatilho A** (resumo), a pedido do atendente. "Engajamento" \= resposta NPS ou movimento no N1; **disparo enviado não conta**.  
+- `clientes_para_contato(preventiva_vencida=True)` → consulta do **gatilho B** (resumo), independente de recência.  
+- `historico_relacionamento(cliente_id)` → linha do tempo de **engajamento do cliente**: última resposta de NPS, última visita registrada no N1, últimas atualizações cadastral e de contrato, contratos ativos/encerrados. **Ignora mensagens enviadas** pela Millenium.  
+- `ficha_cliente(...)` e `situacao_nps(...)` → detalhe/NPS de **um** cliente, para aprofundar ou **confirmar um match incerto**.
+
+Regra: as tools de consulta **enriquecem** a fila que o backend enviou, **nunca a substituem nem reduzem** — quem define *quem entra* é o backend, pelos gatilhos.
 
 ### 5.4 Fluxo
 
-clientes\_inativos (A) \+ clientes\_para\_contato (B) → deduplicar → priorizar (RFM) → GERAR DOCUMENTO
+**backend compila (gatilhos A+B → deduplica → prioriza RFM → dossiê)** → `preventivo_contatos` envia a fila pronta → o agente **formata** → GERAR DOCUMENTO
 
-   → (atendente escolhe cliente) → historico\_relacionamento \+ ficha\_cliente
+   → (sob demanda, para aprofundar/conferir) → historico\_relacionamento \+ ficha\_cliente
 
    → consultar\_wiki(tom do segmento \+ perguntas-descoberta) → PERGUNTAS de descoberta
 
@@ -212,31 +218,28 @@ Mesmo em MCP local, o resultado das tools vai ao modelo — minimização é obr
 
 ## 7\. Pipeline de dados e cruzamento
 
-> O detalhamento completo (dicionário canônico, cascata, resolução por prioridade e evidência dos
-> dados reais) está no documento-irmão **3‑cruzamento‑de‑dados**. Abaixo, o essencial de negócio.
+**Hierarquia de fontes:**
 
-**Hierarquia de fontes (categoria · prioridade do field mapping):**
-
-- **Principal — N1 (três exports):** Contatos/cadastro (`CADASTRO_ORGANIZACAO` · **1** — identidade-mestre), Saídas por NF (`NOTA_FISCAL` · **2** — venda e valor), Sistema contratado (`PRODUTO` · **3** — contrato e vigência).  
-- **Principal — respostas do NPS** (`NPS` · **5**): o cliente respondeu (não que enviamos).  
-- **Auxiliar — Megazap** (`WHATSAPP` · **4**): cada **registro de atendimento é uma conversa** e conta como engajamento/recência (não separamos “recebida × enviada”). **People CRM** (futura, fora do field mapping atual). Um **disparo de marketing** enviado, esse não conta.
-
-Quando o mesmo campo vem de mais de uma fonte, vence a de **menor prioridade** — a identidade é sempre a do N1‑Contatos.
+- **Principal — N1:** visitas registradas, atualizações cadastrais e de contrato.  
+- **Principal — respostas do NPS:** o cliente respondeu (não que enviamos).  
+- **Auxiliar — People CRM e Megazap:** e, mesmo aqui, só **resposta** do cliente conta; disparo enviado, não.
 
 **Campos por cliente a garantir (export e, depois, API):**
 
 - Data do primeiro contrato/compra (**antiguidade**).  
-- Data do **último sinal de engajamento / conversa** (**recência**): última resposta de NPS, última venda no N1, última atualização/renovação de contrato, **último atendimento registrado no Megazap**. **Nunca** usar data de disparo de marketing. *Obs.: no export atual não há coluna de “visita” — a última visita é um **proxy** pelas datas disponíveis.*  
+- Data do **último sinal de engajamento** (**recência**): última resposta de NPS, última visita registrada no N1, última atualização cadastral, última atualização/renovação de contrato. **Nunca** usar data de disparo enviado.  
 - Nº desses sinais no período (**frequência**).  
-- Valor (**soma das NF**): o **valor do contrato** é a **soma de todas as notas fiscais** do cliente, acumulada no campo `ValorTotalNF` pelo backend.  
+- Valor do contrato / faturamento (**valor**).  
 - Status do contrato (ativo/encerrado) e representante/contato.
 
-**Cruzamento (o "join" entre as bases):** construir uma visão única por cliente cruzando **N1 (×3) \+ respondentes do NPS \+ (auxiliar) Megazap/People**, numa **cascata de confiança**: CNPJ (exato) → telefone (provável) → **nome fantasia / razão social normalizados** (incerto); dentro do N1, o **código do cliente** (ex.: `11111- …`) amarra as três planilhas. O NPS não traz CNPJ e casa melhor por **nome fantasia** — por isso a **padronização** de razão social/fantasia é o passo decisivo.
+**Cruzamento (o "join" entre as bases):** Construir uma visão única por cliente cruzando **respondentes do NPS \+ N1 \+ (auxiliar) Megazap/People**. Chave de junção: **CNPJ** quando houver, com **razão social** como reserva — lembrando que no formulário de NPS o CNPJ é opcional e a razão social é obrigatória, então a razão social precisa estar **padronizada** para casar as bases.
 
-- **Fase 1 (Excel):** juntar as planilhas com normalização determinística (acentos, "Ltda/S.A.", espaços, maiúsculas, ordem de palavras) **antes** do match; N1‑Contatos é a base-mestre, NPS e auxiliares enriquecem. Match **incerto → conferência humana**.  
+- **Fase 1 (Excel):** juntar as planilhas por CNPJ/razão social num script de ETL determinístico; normalizar variações de razão social (acentos, "Ltda/S.A.", espaços, maiúsculas) **antes** do match. O N1 é a base-mestre; NPS e auxiliares enriquecem.  
 - **Fase 2 (integração):** o mesmo cruzamento via **API do N1** (mestre) \+ respostas de NPS, com enriquecimento opcional de People/Megazap, consolidado no backend.
 
-Fase 1 assume a limitação de campos que faltarem no export (nos dados reais o CNPJ quase não casa entre fontes, então o casamento recai sobre nome normalizado); a lista de inativos sai do que houver de sinais de engajamento e melhora conforme a integração amadurece.
+> **Chave interna do N1.** As **três planilhas do N1** (cadastro, contrato, nota fiscal) se amarram entre si pelo **código do cliente** — a coluna **`Cod`** do cadastro, que reaparece como prefixo `11111- ` nas outras duas. Esse código é uma chave **interna de ingestão** para dentro do sistema de back-end; a partir do cliente consolidado, a **identidade** e a **busca do agente** usam o **CNPJ** (ou a razão social), com o código só como reserva quando falta CNPJ. O detalhe técnico está no **3‑cruzamento (§4/§4.1)**.
+
+Fase 1 assume a limitação de campos que faltarem no export; a lista de inativos sai do que houver de sinais de engajamento e melhora conforme a integração amadurece.
 
 ---
 
@@ -256,15 +259,15 @@ Sequência: **Governança \+ Wiki \+ campos de dados primeiro**; depois o **Agen
 
 ## 9\. Riscos e decisões
 
-| Risco / decisão                                                         | Encaminhamento                                                                                                                      |
-|:------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------|
-| O N1 registra e datazona visitas e atualizações cadastrais/contratuais? | **Confirmar na descoberta**; é o que sustenta a recência. Se faltar, aproximar com as datas que houver                              |
-| Casar bases sem CNPJ (NPS com CNPJ opcional)                            | Padronizar razão social antes do match; priorizar CNPJ quando existir                                                               |
-| Limiares de antiguidade/recência/valor                                  | Decisão do comercial em `parametros/limiares.md`                                                                                    |
-| Base legal do contato proativo                                          | **Confirmar com a Acta** antes de rodar com dado real (portão)                                                                      |
-| Baixa resposta de NPS                                                   | NPS conta como sinal de recência quando existe; o **N1 dá a cobertura** do resto                                                    |
-| Confundir disparo com conversa                                          | Regra fixa: **enviar ≠ conversa** — disparo de marketing não conta, mas o **atendimento registrado no Megazap conta como conversa** |
-| Contato proativo mal calibrado incomoda                                 | Segmentação \+ CNV \+ limite de frequência \+ humano na revisão                                                                     |
-| Descobertas não viram melhoria                                          | Registrar o que o cliente revela e encaminhar a produto/serviço                                                                     |
+| Risco / decisão                                                         | Encaminhamento                                                                                         |
+|:------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------|
+| O N1 registra e datazona visitas e atualizações cadastrais/contratuais? | **Confirmar na descoberta**; é o que sustenta a recência. Se faltar, aproximar com as datas que houver |
+| Casar bases sem CNPJ (NPS com CNPJ opcional)                            | Padronizar razão social antes do match; priorizar CNPJ quando existir                                  |
+| Limiares de antiguidade/recência/valor                                  | Decisão do comercial em `parametros/limiares.md`                                                       |
+| Base legal do contato proativo                                          | **Confirmar com a Acta** antes de rodar com dado real (portão)                                         |
+| Baixa resposta de NPS                                                   | NPS conta como sinal de recência quando existe; o **N1 dá a cobertura** do resto                       |
+| Confundir disparo com contato                                           | Regra fixa: **enviar ≠ contato**; recência só por engajamento do cliente                               |
+| Contato proativo mal calibrado incomoda                                 | Segmentação \+ CNV \+ limite de frequência \+ humano na revisão                                        |
+| Descobertas não viram melhoria                                          | Registrar o que o cliente revela e encaminhar a produto/serviço                                        |
 
 ---

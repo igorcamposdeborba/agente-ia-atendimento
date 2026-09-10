@@ -1,8 +1,8 @@
 package com.millenium.agente.mcp;
 
-import com.millenium.agente.core.model.Cliente360;
-import com.millenium.agente.core.model.ClienteInativo;
-import com.millenium.agente.core.model.SinalEngajamento;
+import com.millenium.agente.core.dto.Cliente360;
+import com.millenium.agente.core.dto.ClienteInativo;
+import com.millenium.agente.core.dto.SinalEngajamento;
 import com.millenium.agente.core.service.ClienteService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -59,9 +59,26 @@ public class ClienteTools {
         return sb.toString();
     }
 
+    @Tool(name = "preventivo_contatos",
+            description = "FILA COMPLETA E PRONTA do Preventivo para gerar o documento: TODOS os "
+                    + "clientes que disparam o gatilho A (inatividade) e/ou B (preventiva vencida), "
+                    + "deduplicados e priorizados por RFM, JA com o dossie de cada um (cadastro, "
+                    + "produtos, valor soma NF, antiguidade/inatividade, gatilho(s), RFM, NPS, "
+                    + "confianca e sinais). O BACKEND seleciona quem entra pelos gatilhos — uma unica "
+                    + "chamada traz tudo. Para o documento do Preventivo use SEMPRE esta tool: NAO "
+                    + "escolha gatilho, NAO chame ficha_cliente por cliente, NAO omita nenhum; apenas "
+                    + "formate um bloco por cliente retornado.")
+    public String preventivoContatos(
+            @ToolParam(required = false, description = "limite opcional; por padrao retorna a fila inteira") Integer limite) {
+        List<ClienteInativo> fila = service.clientesParaContato(null);   // A ∪ B, deduplicada
+        return Formatador.dossieFila(fila, service.totalClientes(), limite);
+    }
+
     @Tool(name = "clientes_inativos",
-            description = "Gatilho A do Preventivo: clientes ANTIGOS sem contato recente (enviar nao "
-                    + "conta como contato), priorizados por RFM. Matches incertos vem marcados.")
+            description = "CONSULTA pontual do SUBCONJUNTO do gatilho A (clientes antigos sem contato "
+                    + "recente; enviar nao conta), em linhas-resumo. NAO use para montar o documento "
+                    + "do Preventivo — para isso use preventivo_contatos (fila completa A+B). Util so "
+                    + "quando o atendente pedir explicitamente apenas os inativos.")
     public String clientesInativos(
             @ToolParam(required = false, description = "quantos clientes retornar (padrao 20)") Integer limite) {
         List<ClienteInativo> fila = service.clientesInativos();
@@ -70,9 +87,10 @@ public class ClienteTools {
     }
 
     @Tool(name = "clientes_para_contato",
-            description = "Fila de contato do Preventivo. Com preventivaVencida=true, retorna so o "
-                    + "gatilho B (preventiva vencida - proxy pela ultima visita). Sem o parametro, "
-                    + "retorna a UNIAO de A (inatividade) e B, deduplicada por cliente e priorizada por RFM.")
+            description = "CONSULTA em linhas-resumo da fila de contato. Com preventivaVencida=true, so "
+                    + "o gatilho B; sem o parametro, a uniao A+B deduplicada. Para GERAR O DOCUMENTO "
+                    + "use preventivo_contatos (traz o dossie completo, nao so o resumo). Esta tool "
+                    + "serve para uma olhada rapida ou para restringir a um gatilho a pedido do atendente.")
     public String clientesParaContato(
             @ToolParam(required = false, description = "true = apenas preventiva vencida (gatilho B)") Boolean preventivaVencida,
             @ToolParam(required = false, description = "quantos clientes retornar (padrao 20)") Integer limite) {

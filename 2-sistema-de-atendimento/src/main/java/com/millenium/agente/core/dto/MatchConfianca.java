@@ -1,4 +1,4 @@
-package com.millenium.agente.core.model;
+package com.millenium.agente.core.dto;
 
 /**
  * Marca de confianca do casamento de registros entre fontes (cascata CNPJ -> telefone -> razao social).

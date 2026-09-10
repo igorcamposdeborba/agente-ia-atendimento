@@ -1,9 +1,9 @@
 package com.millenium.agente.core.port;
 
-import com.millenium.agente.core.model.RegistroMegazap;
-import com.millenium.agente.core.model.RegistroN1;
-import com.millenium.agente.core.model.RegistroNps;
-import com.millenium.agente.core.model.RegistroPeople;
+import com.millenium.agente.core.dto.RegistroMegazap;
+import com.millenium.agente.core.dto.RegistroN1;
+import com.millenium.agente.core.dto.RegistroNps;
+import com.millenium.agente.core.dto.RegistroPeople;
 
 import java.util.List;
 

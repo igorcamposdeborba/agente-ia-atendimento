@@ -2,11 +2,11 @@ package com.millenium.agente.core.service;
 
 import com.millenium.agente.config.MilleniumProperties;
 import com.millenium.agente.core.linkage.EntityResolver;
-import com.millenium.agente.core.model.Cliente360;
-import com.millenium.agente.core.model.ClienteInativo;
-import com.millenium.agente.core.model.MatchConfianca;
-import com.millenium.agente.core.model.Rfm;
-import com.millenium.agente.core.model.SinalEngajamento;
+import com.millenium.agente.core.dto.Cliente360;
+import com.millenium.agente.core.dto.ClienteInativo;
+import com.millenium.agente.core.dto.MatchConfianca;
+import com.millenium.agente.core.dto.Rfm;
+import com.millenium.agente.core.dto.SinalEngajamento;
 import com.millenium.agente.core.normalizacao.Normalizador;
 import com.millenium.agente.core.port.FonteDadosPort;
 import com.millenium.agente.core.recencia.CalculadoraRecencia;

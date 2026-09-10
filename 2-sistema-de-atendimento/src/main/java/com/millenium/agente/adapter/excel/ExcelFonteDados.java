@@ -6,10 +6,10 @@ import com.millenium.agente.adapter.excel.LinhasPlanilha.LinhaNf;
 import com.millenium.agente.adapter.excel.LinhasPlanilha.LinhaNps;
 import com.millenium.agente.adapter.excel.LinhasPlanilha.LinhaSistema;
 import com.millenium.agente.config.MilleniumProperties;
-import com.millenium.agente.core.model.RegistroMegazap;
-import com.millenium.agente.core.model.RegistroN1;
-import com.millenium.agente.core.model.RegistroNps;
-import com.millenium.agente.core.model.RegistroPeople;
+import com.millenium.agente.core.dto.RegistroMegazap;
+import com.millenium.agente.core.dto.RegistroN1;
+import com.millenium.agente.core.dto.RegistroNps;
+import com.millenium.agente.core.dto.RegistroPeople;
 import com.millenium.agente.core.normalizacao.Normalizador;
 import com.millenium.agente.core.port.FonteDadosPort;
 import org.slf4j.Logger;
@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,14 +33,14 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * Adaptador de saida da Fase 1 — le as CINCO planilhas do field mapping, <b>desserializa</b> cada
- * linha num record tipado (via {@link LeitorCabecalho}/Jackson; o NPS pela especializacao
- * {@link LeitorNps}) e <b>consolida</b> na visao por cliente que o nucleo consome
- * ({@link RegistroN1}/{@link RegistroMegazap}/{@link RegistroNps}). O Core NAO muda entre as fases.
+ * Adaptador de saída da Fase 1 — lê as CINCO planilhas do field mapping, <b>desserializa</b> cada
+ * linha num record tipado (via {@link PlanilhaExcel#porCabecalho}; o NPS por posição, pois seu
+ * cabeçalho é uma pergunta longa) e <b>consolida</b> na visão por cliente que o núcleo consome
+ * ({@link RegistroN1}/{@link RegistroMegazap}/{@link RegistroNps}). O Core NÃO muda entre as fases.
  * <p>
- * Regras do field mapping aplicadas aqui: N1 amarrado pelo <b>codigo</b> (Cod / prefixo "11111- ");
- * <b>valor do contrato = soma de todas as NF</b>; recencia por <b>ultimo registro</b> (NF/Megazap);
- * e-mail reduzido ao <b>dominio</b> (chave auxiliar); Megazap = <b>conversa</b> (sem "direcao").
+ * Regras do field mapping aplicadas aqui: N1 amarrado pelo <b>código</b> (Cod / prefixo "11111- ");
+ * <b>valor do contrato = soma de todas as NF</b>; recência pelo <b>último registro</b> (NF/Megazap);
+ * e-mail reduzido ao <b>domínio</b> (chave auxiliar); Megazap = <b>conversa</b> (sem "direção").
  */
 @Component
 public class ExcelFonteDados implements FonteDadosPort {
@@ -47,13 +48,7 @@ public class ExcelFonteDados implements FonteDadosPort {
     private static final Logger log = LoggerFactory.getLogger(ExcelFonteDados.class);
 
     private final MilleniumProperties props;
-    private final PlanilhaLeitor leitor = new PlanilhaLeitor();
-
-    private final LeitorFonte<LinhaContatos> lerContatos = new LeitorCabecalho<>(leitor, LinhaContatos.class);
-    private final LeitorFonte<LinhaSistema> lerSistema = new LeitorCabecalho<>(leitor, LinhaSistema.class);
-    private final LeitorFonte<LinhaNf> lerNf = new LeitorCabecalho<>(leitor, LinhaNf.class);
-    private final LeitorFonte<LinhaMegazap> lerMegazap = new LeitorCabecalho<>(leitor, LinhaMegazap.class);
-    private final LeitorFonte<LinhaNps> lerNps = new LeitorNps(leitor);
+    private final PlanilhaExcel excel = new PlanilhaExcel();
 
     private volatile List<RegistroN1> n1;
     private volatile List<RegistroMegazap> megazap;
@@ -64,7 +59,7 @@ public class ExcelFonteDados implements FonteDadosPort {
     }
 
     // ============================ FonteDadosPort ============================
-    @Override public List<RegistroN1> lerN1()           { consolidar(); return n1; }
+    @Override public List<RegistroN1> lerN1()            { consolidar(); return n1; }
     @Override public List<RegistroMegazap> lerMegazap()  { consolidar(); return megazap; }
     @Override public List<RegistroNps> lerNps()          { consolidar(); return nps; }
     @Override public List<RegistroPeople> lerPeople()    { return List.of(); }  // People fora do field mapping atual
@@ -76,47 +71,54 @@ public class ExcelFonteDados implements FonteDadosPort {
         consolidar();
     }
 
-    // ============================ consolidacao ============================
+    // ============================ consolidação ============================
     private synchronized void consolidar() {
         if (n1 != null) return;
-        garantirPlanilhas();   // 1a execucao: semeia a pasta de fontes se estiver vazia
+        garantirPlanilhas();   // 1a execução: semeia a pasta de fontes se estiver vazia
 
-        // 1) identidade-mestre (N1-Contatos), indexada por codigo
+        // 1) identidade-mestre (N1-Contatos), indexada por código
         Map<String, Cliente> porCodigo = new LinkedHashMap<>();
-        for (LinhaContatos l : lerContatos.ler(arquivo("contatos"))) {
+        for (LinhaContatos l : excel.porCabecalho(arquivo("contatos"), LinhaContatos.class)) {
             if (l.codigo() == null || l.codigo().isBlank()) continue;
             porCodigo.put(l.codigo(), Cliente.de(l));
         }
         log.info("N1-Contatos: {} cliente(s)", porCodigo.size());
 
-        // 2) contratos/vigencias (N1-Sistema), casados pelo codigo do prefixo do "Cliente"
-        for (LinhaSistema l : lerSistema.ler(arquivo("sistema"))) {
+        // 2) contratos/vigências (N1-Sistema), casados pelo código do prefixo do "Cliente"
+        for (LinhaSistema l : excel.porCabecalho(arquivo("sistema"), LinhaSistema.class)) {
             Cliente c = porCodigo.get(Normalizador.codigoCliente(l.cliente()));
             if (c == null) continue;
             c.adicionarProduto(Normalizador.removerCodigo(l.servico()));
-            LocalDate ini = PlanilhaLeitor.parseData(l.inicioVigencia());
-            LocalDate fim = PlanilhaLeitor.parseData(l.fimVigencia());
+            LocalDate ini = PlanilhaExcel.parseData(l.inicioVigencia());
+            LocalDate fim = PlanilhaExcel.parseData(l.fimVigencia());
             c.primeiroContrato = maisAntiga(c.primeiroContrato, ini);
             c.movimentoContrato = maisRecente(c.movimentoContrato, maisRecente(ini, fim));
         }
 
-        // 3) notas fiscais (N1-NF): valor do contrato = SOMA das NF; recencia = ultima NF
-        for (LinhaNf l : lerNf.ler(arquivoNf())) {
+        // 3) notas fiscais (N1-NF): valor do contrato = SOMA das NF; recência = última NF
+        for (LinhaNf l : excel.porCabecalho(arquivoNf(), LinhaNf.class)) {
             Cliente c = porCodigo.get(Normalizador.codigoCliente(l.pessoa()));
             if (c == null) continue;
-            BigDecimal v = PlanilhaLeitor.parseValor(l.valorTotalNf());
+            BigDecimal v = PlanilhaExcel.parseValor(l.valorTotalNf());
             if (v != null) c.valorTotalNF = c.valorTotalNF.add(v);
-            c.ultimaNF = maisRecente(c.ultimaNF, PlanilhaLeitor.parseData(l.dataLancamento()));
+            c.ultimaNF = maisRecente(c.ultimaNF, PlanilhaExcel.parseData(l.dataLancamento()));
         }
 
-        // 4) N1 consolidado -> registros que o EntityResolver agrega (chave = CNPJ real ou codigo)
+        // 4) N1 consolidado -> registros que o EntityResolver agrega (chave = CNPJ real ou código)
         this.n1 = porCodigo.values().stream().flatMap(this::registrosN1).toList();
 
-        // 5) Megazap: cada registro e uma conversa; casa por CNPJ, telefone ou dominio de e-mail
-        this.megazap = consolidarMegazap(porCodigo.values(), lerMegazap.ler(arquivo("megazap")));
+        // 5) Megazap: cada registro é uma conversa; casa por CNPJ, telefone ou domínio de e-mail
+        this.megazap = consolidarMegazap(porCodigo.values(),
+                excel.porCabecalho(arquivo("megazap"), LinhaMegazap.class));
 
-        // 6) NPS: casa por nome fantasia (pre-resolvido); ultimo registro por cliente
-        this.nps = consolidarNps(porCodigo.values(), lerNps.ler(arquivo("nps")));
+        // 6) NPS: lido por posição (A=carimbo, C=empresa, D=nota, E=comentário), pula o cabeçalho
+        //    (pergunta longa) e respostas sem empresa; casa por nome fantasia; último registro por cliente
+        List<LinhaNps> npsLinhas = excel.posicional(arquivo("nps")).stream()
+                .skip(1)
+                .map(LinhaNps::deColunas)
+                .filter(n -> n.empresa() != null && !n.empresa().isBlank())
+                .toList();
+        this.nps = consolidarNps(porCodigo.values(), npsLinhas);
 
         log.info("Consolidado: {} cliente(s), {} linha(s) N1, {} Megazap, {} NPS",
                 porCodigo.size(), n1.size(), megazap.size(), nps.size());
@@ -132,16 +134,16 @@ public class ExcelFonteDados implements FonteDadosPort {
                     c.chave(), c.razaoSocial, produtos.get(i), null,
                     i == 0 ? c.valorTotalNF : BigDecimal.ZERO,     // soma das NF na 1a linha
                     c.primeiroContrato, "Ativo",
-                    visitaProxy,                                    // ultima visita (proxy)
+                    visitaProxy,                                    // última visita (proxy)
                     c.ultimaNF,                                     // compra registrada (NF)
-                    c.movimentoContrato,                            // atualizacao/renovacao de contrato
-                    null,                                           // representante (Contatos nao traz)
+                    c.movimentoContrato,                            // atualização/renovação de contrato
+                    null,                                           // representante (Contatos não traz)
                     c.telefone));
         }
         return linhas.stream();
     }
 
-    private List<RegistroMegazap> consolidarMegazap(java.util.Collection<Cliente> clientes, List<LinhaMegazap> linhas) {
+    private List<RegistroMegazap> consolidarMegazap(Collection<Cliente> clientes, List<LinhaMegazap> linhas) {
         Map<String, String> porCnpj = new LinkedHashMap<>();
         Map<String, String> porTel = new LinkedHashMap<>();
         Map<String, Set<String>> porDominio = new LinkedHashMap<>();
@@ -150,14 +152,14 @@ public class ExcelFonteDados implements FonteDadosPort {
             if (c.telefone != null) porTel.put(c.telefone, c.chave());
             c.emailDominios.forEach(d -> porDominio.computeIfAbsent(d, k -> new LinkedHashSet<>()).add(c.chave()));
         }
-        // dominio so identifica cliente quando e unico (dominio compartilhado por varios -> ignorado)
+        // domínio só identifica cliente quando é único (domínio compartilhado por vários -> ignorado)
         Map<String, String> porDominioUnico = new LinkedHashMap<>();
         porDominio.forEach((d, set) -> { if (set.size() == 1) porDominioUnico.put(d, set.iterator().next()); });
 
         Map<String, LocalDate> ultimoPorCliente = new LinkedHashMap<>();
         Map<String, String> razaoPorCliente = new LinkedHashMap<>();
         for (LinhaMegazap m : linhas) {
-            LocalDate data = PlanilhaLeitor.parseData(m.dataDeCriacao());
+            LocalDate data = PlanilhaExcel.parseData(m.dataDeCriacao());
             if (data == null) continue;                              // pula a linha de legenda
             String cnpj = Normalizador.cnpj(m.cnpj());
             String tel = m.telefoneCliente() == null ? null : Normalizador.telefone(m.telefoneCliente());
@@ -175,34 +177,34 @@ public class ExcelFonteDados implements FonteDadosPort {
                 .toList();
     }
 
-    private List<RegistroNps> consolidarNps(java.util.Collection<Cliente> clientes, List<LinhaNps> linhas) {
+    private List<RegistroNps> consolidarNps(Collection<Cliente> clientes, List<LinhaNps> linhas) {
         Map<String, RegistroNps> ultimoPorCliente = new LinkedHashMap<>();
         int orfaos = 0;
         for (LinhaNps n : linhas) {
             Cliente alvo = melhorCliente(n.empresa(), clientes);
-            if (alvo == null) { orfaos++; continue; }                // sem casamento seguro -> conferencia humana
-            LocalDate data = PlanilhaLeitor.parseData(n.carimbo());
-            // casaExato -> casa por CNPJ (EXATO); parcial -> casa por razao social (INCERTO)
+            if (alvo == null) { orfaos++; continue; }                // sem casamento seguro -> conferência humana
+            LocalDate data = PlanilhaExcel.parseData(n.carimbo());
+            // casaExato -> casa por CNPJ (EXATO); parcial -> casa por razão social (INCERTO)
             RegistroNps novo = new RegistroNps(
                     casaExato(n.empresa(), alvo) ? alvo.chave() : "",
                     alvo.razaoSocial,
-                    PlanilhaLeitor.parseInteiro(n.nota()),
+                    PlanilhaExcel.parseInteiro(n.nota()),
                     n.comentario(),
                     data);
             RegistroNps atual = ultimoPorCliente.get(alvo.chave());
             if (atual == null || (data != null && (atual.data() == null || data.isAfter(atual.data())))) {
-                ultimoPorCliente.put(alvo.chave(), novo);            // mantem o ultimo registro
+                ultimoPorCliente.put(alvo.chave(), novo);            // mantém o último registro
             }
         }
-        if (orfaos > 0) log.info("NPS: {} resposta(s) sem casamento seguro -> conferencia humana", orfaos);
+        if (orfaos > 0) log.info("NPS: {} resposta(s) sem casamento seguro -> conferência humana", orfaos);
         return List.copyOf(ultimoPorCliente.values());
     }
 
-    // ---------- localizacao dos arquivos por trecho do nome (field mapping) ----------
+    // ---------- localização dos arquivos por trecho do nome (field mapping) ----------
     private Path arquivo(String... trechos) {
         Path dir = Path.of(props.getFonteDir());
         if (!Files.isDirectory(dir)) {
-            log.warn("Pasta de dados nao encontrada: {}", dir.toAbsolutePath());
+            log.warn("Pasta de dados não encontrada: {}", dir.toAbsolutePath());
             return null;
         }
         try (Stream<Path> s = Files.list(dir)) {
@@ -211,7 +213,7 @@ public class ExcelFonteDados implements FonteDadosPort {
                         return n.endsWith(".xlsx") && !n.startsWith("~$");
                     })
                     .filter(p -> {
-                        String n = PlanilhaLeitor.norm(p.getFileName().toString());
+                        String n = PlanilhaExcel.norm(p.getFileName().toString());
                         for (String t : trechos) if (!n.contains(t)) return false;
                         return true;
                     })
@@ -222,17 +224,17 @@ public class ExcelFonteDados implements FonteDadosPort {
         }
     }
 
-    /** A planilha de NF aparece como "...SAIDAS DE PRODUTOS POR NF..."; aceita "saidas" ou "nf". */
+    /** A planilha de NF aparece como "...SAÍDAS DE PRODUTOS POR NF..."; aceita "saidas" ou "nf". */
     private Path arquivoNf() {
         Path a = arquivo("saidas");
         return a != null ? a : arquivo("nf");
     }
 
     /**
-     * Se a pasta de fontes ({@code millenium.fonte-dir}, padrao {@code ${user.home}/MilleniumAgenteIA/fonte})
-     * estiver vazia, semeia as planilhas ficticias empacotadas no jar ({@code classpath:fonte/*.xlsx}).
+     * Se a pasta de fontes ({@code millenium.fonte-dir}, padrão {@code ${user.home}/MilleniumAgenteIA/fonte})
+     * estiver vazia, semeia as planilhas fictícias empacotadas no jar ({@code classpath:fonte/*.xlsx}).
      * Assim o .mcpb funciona de imediato lendo sempre do mesmo caminho, sem depender de arquivos
-     * dentro da extensao. Para dados reais, basta substituir os .xlsx nessa pasta.
+     * dentro da extensão. Para dados reais, basta substituir os .xlsx nessa pasta.
      */
     private void garantirPlanilhas() {
         Path dir = Path.of(props.getFonteDir());
@@ -254,14 +256,14 @@ public class ExcelFonteDados implements FonteDadosPort {
                     }
                 }
             }
-            log.info("Pasta de fontes vazia — {} planilha(s) ficticia(s) semeada(s) em {}", recursos.length, dir);
+            log.info("Pasta de fontes vazia — {} planilha(s) fictícia(s) semeada(s) em {}", recursos.length, dir);
         } catch (Exception e) {
-            log.warn("Nao foi possivel semear as planilhas em {}: {}", dir, e.getMessage());
+            log.warn("Não foi possível semear as planilhas em {}: {}", dir, e.getMessage());
         }
     }
 
     // ---------- casamento NPS por tokens do nome (empresa) x nome/fantasia do cliente ----------
-    private Cliente melhorCliente(String empresa, java.util.Collection<Cliente> clientes) {
+    private Cliente melhorCliente(String empresa, Collection<Cliente> clientes) {
         Set<String> alvo = Normalizador.tokensDistintivos(empresa);
         if (alvo.isEmpty()) return null;
         Cliente melhor = null;
@@ -278,7 +280,7 @@ public class ExcelFonteDados implements FonteDadosPort {
         return !alvo.isEmpty() && c.tokens().containsAll(alvo);   // todos os tokens do NPS presentes
     }
 
-    // ---------- utilitarios de data ----------
+    // ---------- utilitários de data ----------
     private static LocalDate maisRecente(LocalDate a, LocalDate b) {
         return a == null ? b : (b == null ? a : (a.isAfter(b) ? a : b));
     }
@@ -291,7 +293,7 @@ public class ExcelFonteDados implements FonteDadosPort {
         return maisRecente(a, b);
     }
 
-    /** Acumulador por cliente (chaveado pelo codigo do N1). */
+    /** Acumulador por cliente (chaveado pelo código do N1). */
     private static final class Cliente {
         String codigo, razaoSocial, nomeFantasia, cnpj, telefone;
         List<String> emailDominios = List.of();
@@ -310,7 +312,7 @@ public class ExcelFonteDados implements FonteDadosPort {
             return c;
         }
 
-        /** Chave de agregacao do EntityResolver: CNPJ real quando existe, senao o codigo. */
+        /** Chave de agregação do EntityResolver: CNPJ real quando existe, senão o código. */
         String chave() {
             return cnpj != null ? cnpj : codigo;
         }

@@ -113,16 +113,40 @@ certeza**, e cada Cruzamento carrega uma **marca de confiança**.
         (—) nada casa  ─────────►  cliente fica só na fonte de origem
 ```
 
-**Junção interna do N1 (as três planilhas N1):** no N1‑NF e no N1‑Sistema o nome do cliente vem com
-um **prefixo numérico** (`11111- PADARIA SILVA`, `11111 - PADARIA SILVA`). Pelo field mapping, a
-**`RazaoSocial` guarda só o texto** — o número é **removido** (regra §3.1) e usado para casar. Esse
-número corresponde ao `Cod` da planilha de Contatos (`11111`), então serve de **chave interna
-confiável do N1** para amarrar cadastro ↔ contrato ↔ nota fiscal; a normalização deve **tolerar
-variações de espaçamento** (`11111-` vs `11111 -`). Onde o número não estiver disponível, o
-Cruzamento recai sobre a **razão social / nome fantasia normalizados**.
+**Junção interna do N1 (as três planilhas N1) — é o código do N1 que amarra:** as três planilhas do
+N1 são cruzadas **pelo código interno do cliente**, e não pelo CNPJ. Onde ele está em cada arquivo:
+
+- **N1‑Contatos** — o código está na **coluna `Cod`** (ex.: `11111`). É a identidade‑mestre, indexada
+  por esse código.
+- **N1‑Sistema** — o código vem **embutido no prefixo da coluna `Cliente`** (`11111- PADARIA SILVA`).
+- **N1‑NF** — idem, **embutido no prefixo da coluna `Pessoa`** (`11111- PADARIA SILVA`).
+
+Pelo field mapping, a `RazaoSocial` guarda só o texto — o número é **removido** (regra §3.1) e o
+mesmo número é **extraído** para casar (`Normalizador.codigoCliente`, regex `^\s*(\d+)\s*-`, tolerando
+`11111-` vs `11111 -`). No código: o adaptador `ExcelFonteDados` monta um índice `porCodigo` a partir
+do `Cod` dos Contatos e liga Sistema e NF a esse índice pelo código do prefixo. Onde o número não
+estiver disponível, o Cruzamento recai sobre a **razão social / nome fantasia normalizados**.
 
 **Ordem-mestre:** o **N1‑Contatos (prioridade 1)** é a base sobre a qual as demais penduram
 recência e contexto. NPS e Megazap **enriquecem**; nunca substituem a identidade do cadastro.
+
+### 4.1 Qual chave é usada — e a partir de qual ponto
+
+Há **duas chaves diferentes**, em momentos diferentes do fluxo:
+
+| Etapa do fluxo                                                                                | Chave usada                                                                      | Onde no código                                                                    |
+|-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| **Ingestão** quando entra no backend: amarra as 3 planilhas do N1 (Contatos ↔ Sistema ↔ NF)   | **Código interno do N1** (coluna `Cod`; prefixo `11111- ` em `Cliente`/`Pessoa`) | `ExcelFonteDados` (índice `porCodigo`) + `Normalizador.codigoCliente()`           |
+| **Identidade** do cliente consolidado (chave de agregação), na etapa de transformação do dado | **CNPJ** quando existe; **código como reserva** se não houver CNPJ               | `Cliente.chave() = cnpj != null ? cnpj : codigo`; `EntityResolver` agrega por ela |
+| Cruzar **Megazap** ao cliente                                                                 | CNPJ, telefone ou domínio de e‑mail                                              | `ExcelFonteDados` (consolidação do Megazap)                                       |
+| Cruzar **NPS** ao cliente                                                                     | tokens de **nome/fantasia** (EXATO/INCERTO)                                      | `ExcelFonteDados` + `Normalizador.tokens/tokensDistintivos`                       |
+| **Busca do agente** (`ficha_cliente`, `situacao_nps`, …)                                      | **CNPJ ou razão social** (nunca o código)                                        | `ClienteService.buscar(termo)`                                                    |
+
+**O código do N1 é uma chave interna de ingestão — vale só até montar o cliente
+consolidado.** A partir do cliente consolidado (identidade, casamento das outras fontes e **busca do
+agente**), a chave passa a ser o **CNPJ** — com o **código como reserva** apenas quando o cliente não
+tem CNPJ. Nos dados fictícios atuais cada cliente tem um CNPJ próprio, então a chave efetiva é o CNPJ;
+o agente nunca vê nem usa o código interno.
 
 ---
 
@@ -184,22 +208,31 @@ do próprio grupo (MTEC); o NPS **não tem CNPJ**. Resultado: na PoC o Cruzament
 normalizado**, com o **código interno** amarrando o N1. Isso é esperado e reforça por que a
 **padronização de razão social/fantasia** é o ponto mais crítico.
 
-**b) NPS casa melhor por Nome Fantasia — e vários ficam “incertos”.** Comparando `Empresa` (NPS) com
-`Nome`/`Fantasia` (N1):
+**b) NPS casa por Nome/Fantasia — a maioria casa; poucos ficam “incertos” e um não casa.** O
+casamento do NPS é por **tokens do nome**: se **todos** os tokens da `Empresa` do NPS estão no
+`Nome` **ou** na `Fantasia` do cliente → **EXATO**; se só **parte** bate → **INCERTO** (conferência
+humana); se nenhum token **distintivo** bate → **não entra**. (No código, o resultado do NPS é só
+`EXATO` **ou** `INCERTO` — não há um nível “provável” intermediário para esta fonte.) Sobre as **10
+respostas de NPS de exemplo** (atuais em `fonte/nps.xlsx`):
 
-| NPS `Empresa`               | N1 `Nome`                           | N1 `Fantasia`               | Cruzamento                                               |
-|-----------------------------|-------------------------------------|-----------------------------|----------------------------------------------------------|
-| Padaria Silva               | PADARIA SILVA                       | PADARIA SILVA               | exato (nome)                                             |
-| Mecânica Costa              | COSTA MECANICA                      | **MECANICA COSTA**          | provável **via fantasia** (ordem invertida no nome)      |
-| Berwanger Assessoria        | BERWANGER ASSESSORIA E CONSULTORIA… | **BERWANGER ASSESSORIA**    | exato **via fantasia**                                   |
-| Martins Gastrobar           | JOÃO CARLOS FERREIRA MARTINS        | **MARTINS GASTROBAR**       | exato **via fantasia**                                   |
-| Pontes Autocenter           | AUTOCENTER PONTES E SANTOS          | AUTOCENTER PONTES E SANTOS  | **incerto** (ordem/partes) → conferir                    |
-| Alves Estúdio de Fotografia | LUCIANA ALVES FOTOGRAFIA…           | LUCIANA ALVES FOTOGRAFIA…   | **incerto** → conferir                                   |
-| Vasconcelos Advogados       | VASCONCELOS ADVOCACIA               | VASCONCELOS ADVOCACIA       | **incerto** (“Advogados” × “Advocacia”)                  |
-| **Contabilidade Paim**      | SPARRENBERGER ASSESSORIA CONTÁBIL   | SPARRENBERGER CONTABILIDADE | **sem Cruzamento seguro** → não entra na fila automática |
+| NPS `Empresa`               | N1 `Nome`                           | N1 `Fantasia`               | Resultado                                          |
+|-----------------------------|-------------------------------------|-----------------------------|----------------------------------------------------|
+| Padaria Silva               | PADARIA SILVA                       | PADARIA SILVA               | **EXATO**                                          |
+| Mecânica Costa              | COSTA MECANICA                      | **MECANICA COSTA**          | **EXATO** (via fantasia; ordem invertida no Nome)  |
+| Souza Confecções            | SOUZA CONFECÇÕES                    | SOUZA CONFECÇÕES            | **EXATO**                                          |
+| Pontes Autocenter           | AUTOCENTER PONTES E SANTOS          | AUTOCENTER PONTES E SANTOS  | **EXATO** (todos os tokens do NPS batem)           |
+| Restaurante Camargo         | RESTAURANTE CAMARGO                 | RESTAURANTE CAMARGO         | **EXATO**                                          |
+| Berwanger Assessoria        | BERWANGER ASSESSORIA E CONSULTORIA… | **BERWANGER ASSESSORIA**    | **EXATO** (via fantasia)                           |
+| Martins Gastrobar           | JOÃO CARLOS FERREIRA MARTINS        | **MARTINS GASTROBAR**       | **EXATO** (via fantasia)                           |
+| Alves Estúdio de Fotografia | LUCIANA ALVES FOTOGRAFIA…           | LUCIANA ALVES FOTOGRAFIA…   | **INCERTO** (“estúdio” não bate) → conferir        |
+| Vasconcelos Advogados       | VASCONCELOS ADVOCACIA               | VASCONCELOS ADVOCACIA       | **INCERTO** (“Advogados” × “Advocacia”) → conferir |
+| **Contabilidade Paim**      | SPARRENBERGER ASSESSORIA CONTÁBIL   | SPARRENBERGER CONTABILIDADE | **não casa** → fora da fila automática             |
 
-O caso “Contabilidade Paim” (nenhuma parte bate com “Sparrenberger”) é o exemplo de por que
-**match incerto vai para conferência humana** e **nunca** para abordagem automática.
+**Resultado atual: 7 exatos, 2 incertos, 1 sem casamento.** O “Contabilidade Paim” (só o token comum
+“contabilidade” coincide com a fantasia; “paim” não bate com nada distintivo) é o exemplo de por que
+**match incerto ou sem token distintivo vai para conferência humana** e **nunca** para abordagem
+automática. Os dois incertos (Alves/Luciana e Vasconcelos) são os únicos clientes que saem com
+confiança **INCERTO** na ficha; os demais saem **EXATO**.
 
 **c) Megazap muitas vezes não casa e frequentemente é chamado interno.** No exemplo, o chamado é da
 própria “MTEC SOLUÇÕES”, com telefone que não bate com nenhum cliente do N1 — logo o Megazap
@@ -252,8 +285,14 @@ O cruzamento produz, por cliente, o objeto consolidado que as tools do MCP entre
 | **Gatilhos**             | inatividade (A) / preventiva (B) / ambos                                                           | núcleo          |
 | **Confiança**            | exato / provável / incerto + flag de conferência humana + fontes casadas                           | cascata (§4)    |
 
-Esse objeto é o que aparece em `ficha_cliente`, alimenta `clientes_inativos` / `clientes_para_contato`
-e é renderizado no documento `.docx` do Preventivo e no rascunho do Pós‑NPS.
+Esse objeto é o que o **backend compila e envia à IA** pelo MCP. Para o documento do Preventivo, a
+tool **`preventivo_contatos`** aplica os gatilhos no servidor e devolve a **fila completa (união A ∪ B,
+deduplicada, priorizada por RFM) já com o dossiê** de cada cliente **numa única chamada** (*push* — o
+agente só formata). As demais tools ficam **abertas para consulta sob demanda** (*pull*):
+`ficha_cliente`, `situacao_nps`, `historico_relacionamento`, e `clientes_inativos` /
+`clientes_para_contato` para uma consulta por gatilho. Regra: a consulta **enriquece** a fila que o
+backend enviou, **nunca a substitui nem reduz**. O mesmo objeto é renderizado no documento `.docx` do
+Preventivo e no rascunho do Pós‑NPS.
 
 ---
 
@@ -296,3 +335,6 @@ Valores atuais no MCP (calibráveis pelo comercial — `wiki/parametros.md`):
   e os campos por cliente daquele documento seguem o dicionário canônico da §3.
 - As **skills** (`preventivo`, `pos-nps`) e a **wiki** consomem a saída da §9 sem conhecer o
   cruzamento — a normalização fica encapsulada no MCP.
+- A **regra de entrega** — o backend **compila e envia** a fila (`preventivo_contatos`, *push*) e
+  deixa as tools **abertas para consulta sob demanda** (*pull*) — está detalhada no **1‑design (§4.5)**
+  e no **2‑business (§5)**; aqui a §9 é justamente o objeto que essa fila carrega.

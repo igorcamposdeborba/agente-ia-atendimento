@@ -20,11 +20,9 @@ import java.util.stream.Stream;
 
 /**
  * Tool que salva documentos Word (.docx) no computador, gerados pelo próprio MCP (Apache POI).
- * Não depende de Python nem da capacidade de "code execution" do plano.
  * <p>
  * No documento gerado o <b>CNPJ aparece completo</b> (é documento interno do atendente); o
- * mascaramento vale apenas no canal MCP&lt;-&gt;IA. O MCP faz a troca mascarado-&gt;completo ao gravar,
- * então o CNPJ completo nunca é enviado ao modelo.
+ * mascaramento vale apenas no canal MCP-IA.
  */
 @Component
 public class DocumentoTools {
@@ -56,12 +54,6 @@ public class DocumentoTools {
             @ToolParam(description = "corpo do documento com marcação leve (ver descrição)") String conteudo,
             @ToolParam(required = false, description = "rótulo base do arquivo (ex.: \"plano de atendimento\"); o índice e a data/hora são adicionados") String nomeArquivo) {
 
-        // Captura Throwable (nao so Exception): um Error como NoClassDefFoundError do POI-XWPF num
-        // jar mal reempacotado mataria a thread e deixaria o cliente esperando (o "travou 4 min").
-        // Aqui sempre devolvemos uma resposta ao agente, nunca deixamos a chamada pendurada.
-        // Log de ENTRADA: se este aparecer no arquivo de log mas nao houver "Documento Word salvo"
-        // nem stack de erro logo abaixo, o travamento esta no write do POI. Se NAO aparecer,
-        // a chamada nem chegou ao servidor (jar velho/travado, tool nao registrada).
         log.info("Gerando .docx: titulo=\"{}\", tamanho do conteudo={} chars, nomeArquivo={}",
                 titulo, conteudo == null ? 0 : conteudo.length(), nomeArquivo);
         try {

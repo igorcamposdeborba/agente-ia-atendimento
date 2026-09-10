@@ -5,12 +5,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Linhas tipadas de cada planilha do field mapping. Os quatro primeiros records sao desserializados
- * pelo {@link LeitorCabecalho} (Jackson mapeia o cabecalho normalizado -> campo). O {@link LinhaNps}
- * e a <b>especializacao</b>: o NPS e lido por posicao (colunas D/E), pois seus cabecalhos sao
- * perguntas longas — ver {@link LeitorNps}.
+ * por {@link PlanilhaExcel#porCabecalho} (Jackson mapeia o cabecalho normalizado -> campo). O
+ * {@link LinhaNps} e a <b>especializacao</b>: o NPS e lido por posicao (colunas D/E) em
+ * {@link ExcelFonteDados} via {@link PlanilhaExcel#posicional}, pois seus cabecalhos sao perguntas longas.
  * <p>
  * Os campos ficam como texto cru; a conversao de datas/valores acontece na consolidacao
- * ({@link ExcelFonteDados}) com {@link PlanilhaLeitor#parseData}, {@code parseValor} e {@code parseInteiro}.
+ * ({@link ExcelFonteDados}) com {@link PlanilhaExcel#parseData}, {@code parseValor} e {@code parseInteiro}.
  * {@link JsonIgnoreProperties} torna a leitura tolerante a colunas extras.
  */
 final class LinhasPlanilha {

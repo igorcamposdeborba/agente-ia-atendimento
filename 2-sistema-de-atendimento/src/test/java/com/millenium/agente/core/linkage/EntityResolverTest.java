@@ -1,12 +1,12 @@
 package com.millenium.agente.core.linkage;
 
-import com.millenium.agente.core.model.Cliente360;
-import com.millenium.agente.core.model.FonteSinal;
-import com.millenium.agente.core.model.MatchConfianca;
-import com.millenium.agente.core.model.RegistroMegazap;
-import com.millenium.agente.core.model.RegistroN1;
-import com.millenium.agente.core.model.RegistroNps;
-import com.millenium.agente.core.model.RegistroPeople;
+import com.millenium.agente.core.dto.Cliente360;
+import com.millenium.agente.core.dto.FonteSinal;
+import com.millenium.agente.core.dto.MatchConfianca;
+import com.millenium.agente.core.dto.RegistroMegazap;
+import com.millenium.agente.core.dto.RegistroN1;
+import com.millenium.agente.core.dto.RegistroNps;
+import com.millenium.agente.core.dto.RegistroPeople;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

@@ -1,9 +1,9 @@
 package com.millenium.agente.mcp;
 
-import com.millenium.agente.adapter.excel.PlanilhaEscritor;
+import com.millenium.agente.adapter.excel.PlanilhaExcel;
 import com.millenium.agente.config.MilleniumProperties;
-import com.millenium.agente.core.model.Cliente360;
-import com.millenium.agente.core.model.ClienteInativo;
+import com.millenium.agente.core.dto.Cliente360;
+import com.millenium.agente.core.dto.ClienteInativo;
 import com.millenium.agente.core.service.ClienteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ public class ExportacaoTools {
 
     private final MilleniumProperties props;
     private final ClienteService service;
-    private final PlanilhaEscritor escritor = new PlanilhaEscritor();
+    private final PlanilhaExcel excel = new PlanilhaExcel();
 
     public ExportacaoTools(MilleniumProperties props, ClienteService service) {
         this.props = props;
@@ -102,7 +102,7 @@ public class ExportacaoTools {
         String nome = proximoIndice(dir) + "- " + rotuloBase(base) + " - "
                 + agora.format(DATA) + " as " + agora.format(HORA) + ".xlsx";
 
-        Path salvo = escritor.escrever(dir.resolve(nome), CABECALHO, linhas);
+        Path salvo = excel.escrever(dir.resolve(nome), CABECALHO, linhas);
         return "Excel do cadastro (Cliente 360) salvo em: " + salvo
                 + " — " + linhas.size() + " cliente(s). Documento interno (CNPJ completo); revise antes de compartilhar.";
       } catch (Throwable t) {

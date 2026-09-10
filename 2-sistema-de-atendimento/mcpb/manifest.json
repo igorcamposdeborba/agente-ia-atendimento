@@ -26,8 +26,9 @@
   "tools": [
     { "name": "ficha_cliente", "description": "Ficha 360 do cliente por CNPJ ou razao social." },
     { "name": "situacao_nps", "description": "Nota, faixa, comentario e data do NPS de um cliente." },
-    { "name": "clientes_inativos", "description": "Gatilho A: antigos sem contato recente, por RFM." },
-    { "name": "clientes_para_contato", "description": "Fila A ou B (preventiva vencida), por RFM." },
+    { "name": "preventivo_contatos", "description": "Fila COMPLETA do Preventivo (gatilhos A+B) ja com o dossie de cada cliente, pronta para gerar o documento. O backend seleciona quem entra pelos gatilhos." },
+    { "name": "clientes_inativos", "description": "Consulta do subconjunto do gatilho A (resumo). Para o documento use preventivo_contatos." },
+    { "name": "clientes_para_contato", "description": "Consulta em resumo (A+B ou so B). Para o documento use preventivo_contatos." },
     { "name": "historico_relacionamento", "description": "Linha do tempo dos sinais de engajamento." },
     { "name": "estimar_servico", "description": "Estimativa de servico (nao calibrada na Fase 1)." },
     { "name": "consultar_wiki", "description": "Consulta a wiki (tom, tratativas, perguntas, principios)." },

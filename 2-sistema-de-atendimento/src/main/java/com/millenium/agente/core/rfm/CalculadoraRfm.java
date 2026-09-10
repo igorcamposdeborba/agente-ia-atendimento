@@ -1,6 +1,6 @@
 package com.millenium.agente.core.rfm;
 
-import com.millenium.agente.core.model.Rfm;
+import com.millenium.agente.core.dto.Rfm;
 
 import java.math.BigDecimal;
 

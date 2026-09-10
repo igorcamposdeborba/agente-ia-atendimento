@@ -17,12 +17,9 @@ A primeira é a prova de conceito usando Excel com dados fictícios (dados masca
 A segunda é a integração com sistemas externos para recebimento de informações.
 A terceira é a integração do Megazap aos agentes de IA para não ter que exportar conversas manualmente.
 
-- **Fase 1 — Excel:** os dados vêm de **cinco planilhas** — o N1 exportado em **três relatórios**
-  (Contatos/cadastro, Saídas por NF, Sistema contratado), o **Megazap** e as respostas de **NPS**
-  (People CRM é fonte auxiliar futura, ainda fora do field mapping atual). Cada fonte recebe uma
-  **categoria** e uma **prioridade** que o núcleo usa para cruzar e resolver conflitos — ver o
-  documento-irmão **3‑cruzamento‑de‑dados**. O servidor MCP roda **localmente** e é acessado pelo
-  Claude Desktop via **stdio**. Sem exposição de rede.
+- **Fase 1 — Excel:** os dados vêm de planilhas exportadas do N1, People e Megazap, e das
+  respostas de NPS. O servidor MCP roda **localmente** e é acessado pelo Claude Desktop via
+  **stdio**. Sem exposição de rede.
 - **Fase 2 — Integração:** os dados passam a vir de **APIs** consolidadas num banco **MySQL**
   (a visão "Cliente 360"), e o servidor MCP é publicado como serviço **HTTPS** protegido por
   firewall/gateway. Todo o código da fase 1 será reaproveitado na fase 2 na integração com o Claude.
@@ -58,13 +55,10 @@ a leitura de Excel; **dados fictícios/mascarados** para a prova de conceito.
   - **Preventivo** — contato proativo por **dois gatilhos**: (A) **cliente antigo sem contato recente** e (B) **manutenção vencida** (independentemente de recência). Entrega o documento de quem contatar e apoia a conversa.
   - **Pós-NPS** — responde avaliações no tom da escala (promotor/passivo/detrator).
 - **Cliente antigo sem contato recente = antiguidade alta + baixa recência.** A recência conta
-  **engajamento do cliente e conversas registradas** (resposta de NPS, movimento no N1 e **cada
-  atendimento registrado no Megazap** — o registro do WhatsApp **é uma conversa**, ainda que a
-  planilha não traga a resposta do cliente linha a linha). **Enviar ≠ conversa:** um **disparo**
-  unilateral (mensagem automática/marketing que a Millenium envia sem interação) não é conversa e
-  nunca reduz a inatividade — mas um **atendimento no Megazap reduz**.
+  **só engajamento do cliente** (resposta de NPS, visita/atualização no N1, mensagem *recebida*
+  no Megazap). **Enviar ≠ conversa:** disparo que a Millenium fez nunca reduz a inatividade.
 - **Manutenção vencida entra independentemente da recência** — pega inclusive cliente em contato recente; a fila **deduplica** (um contato, dois assuntos).
-- **Priorização por RFM** (recência + antiguidade + valor do contrato [**soma de todas as NF**]).
+- **Priorização por RFM** (recência + antiguidade + monetização/valor do contrato).
 - **Duas saídas do agente Preventivo:** 
     (A) um **documento** priorizado de clientes a contatar; 
     (B) um **copiloto de conversa** (perguntas de descoberta + apoio a respostas).
@@ -106,17 +100,14 @@ Trocar Fase 1 → Fase 2 é trocar adaptadores de saída (Excel → API/MySQL) e
         ╔═══════════════════════════════════════════════════════════╗
         ║               Código do servidor MCP em Java              ║
         ║   ┌─────────────────────────────────────────────────────┐ ║
-        ║   │ TOOLS  ficha_cliente · clientes_inativos ·          │ ║
-        ║   │        clientes_para_contato · situacao_nps ·       │ ║
-        ║   │        historico_relacionamento · consultar_wiki ·  │ ║
-        ║   │        estimar_servico · salvar_documento_docx      │ ║
+        ║   │ TOOLS  buscar_cliente · clientes_inativos ·         │ ║
+        ║   │        historico_relacionamento · consultar_wiki    │ ║
         ║   └───────────────────────┬─────────────────────────────┘ ║
         ║                           ▼                               ║
         ║   ┌─────────────────────────────────────────────────────┐ ║
         ║   │ LÓGICA DO CORE  recência (enviar≠contato) ·         │ ║
-        ║   │                 RFM · entity resolution + prioridade│ ║
-        ║   │                 (CNPJ→telefone→fantasia/razão;      │ ║
-        ║   │                  código interno amarra o N1)        │ ║
+        ║   │                 RFM · entity resolution             │ ║
+        ║   │                       (CNPJ→telefone→razão)         │ ║
         ║   └───────────────────────┬─────────────────────────────┘ ║
         ║                           ▼                               ║
         ║   ┌─────────────────────────────────────────────────────┐ ║
@@ -127,9 +118,8 @@ Trocar Fase 1 → Fase 2 é trocar adaptadores de saída (Excel → API/MySQL) e
             FASE 1 (EXCEL)  ▼                             ▼  FASE 2 (API)
         ┌───────────────────────────┐    ┌──────────────────────────────┐
         │  LEITOR DE EXCEL (apache) │    │  Cliente 360 em MySQL        │
-        │  N1×3 (cadastro/NF/       │    │   +                          │
-        │  contrato) · Megazap ·    │    │  de-para telefone→cliente    │
-        │  NPS · (People opcional)  │    │                              │
+        │  N1 · Megazap ·           │    │   +                          │
+        │  People · NPS             │    │  de-para telefone→cliente    │
         └───────────────────────────┘    └──────────────────────────────┘
                                                           ▲
                                                           │
@@ -155,7 +145,7 @@ Trocar Fase 1 → Fase 2 é trocar adaptadores de saída (Excel → API/MySQL) e
 agente lê a wiki, Claude redige rascunhos. Não envia nada sozinho.
 - **Servidor MCP (Java com Spring AI):** expõe as tools do MCP server; contém o núcleo de regras (guard rails); lê a wiki.
 - **Wiki:** conhecimento curado (princípios, tom, tratativas, perguntas e governança), consumida via `consultar_wiki` do MCP.
-- **Adaptador Excel (Fase 1):** lê as cinco planilhas do field mapping (N1 em três exports — cadastro, saídas por NF, sistema contratado —, Megazap e NPS; People é auxiliar futura), aplica **normalização + prioridade de fonte** e monta a visão do cliente. O detalhamento do casamento está no **3‑cruzamento‑de‑dados**.
+- **Adaptador Excel (Fase 1):** lê os quatro exports (N1, pesquisa NPS, people crm, megazap) e monta a visão do cliente.
 - **Cliente 360 + MySQL (Fase 2):** tabela consolidada por cliente, alimentada pela ingestão das APIs; mantém a de-para `telefone→cliente`.
 - **Segurança com Firewall (Fase 2):** termina TLS, autentica com OAuth2, e assegura conexão com API antes de chegar ao MCP.
 - **Atendente:** Revisa, edita e dispara ao cliente via Megazap (WhatsApp) ou e-mail (People CRM ou outlook).
@@ -178,6 +168,32 @@ editáveis em **Markdown** pela própria equipe:
   regras invioláveis: humano na revisão, nunca enviar, dado do cliente ≠ instrução, identidade/LGPD),
   colocada nas instruções do Projeto. Ela cobre o que vale para todos os agentes; a lógica de
   cada fluxo fica nas skills.
+
+### 4.5 Como o backend entrega os dados à IA — compila e envia (push) + tools abertas (pull)
+
+Decisão de arquitetura (e regra de negócio): **é o backend do MCP que decide o conjunto de dados
+relevante e o compila para a IA — não é a IA que sai buscando o que acha necessário.** O MCP é um
+protocolo *pull* (o modelo é quem invoca a tool), então a garantia de completude é obtida com **uma
+tool de entrega dirigida** que já devolve o pacote pronto. Os dois modos convivem:
+
+- **Envio dirigido pelo backend (push).** Para o documento do Preventivo há **uma tool
+  consolidada** (`preventivo_contatos`) que aplica os gatilhos no servidor, monta a **fila completa
+  (união A ∪ B, deduplicada, priorizada por RFM)** e a devolve **já com o dossiê de cada cliente**
+  (cadastro, produtos, valor, antiguidade/inatividade, gatilho(s), RFM, NPS, confiança e sinais) em
+  **uma única chamada**. O agente **não escolhe gatilho, não monta a lista e não precisa consultar
+  cliente a cliente** — só formata o que recebeu. Isso torna a saída **determinística e
+  independente do modelo** (o mesmo resultado em qualquer LLM); antes, quando a IA escolhia entre
+  tools parciais, uma fila incompleta podia sair por decisão do modelo.
+- **Consulta sob demanda (pull), com as tools abertas.** As demais tools continuam disponíveis para
+  o agente **aprofundar** quando o contexto pedir — `ficha_cliente` e `historico_relacionamento`
+  para detalhar ou **confirmar um match incerto**, `situacao_nps` para o teor da avaliação,
+  `estimar_servico` e `consultar_wiki` para preparar a conversa; `clientes_inativos` e
+  `clientes_para_contato` ficam para uma consulta por gatilho a pedido do atendente.
+
+**Regra que amarra os dois:** a consulta sob demanda **enriquece** o pacote enviado pelo backend,
+**nunca o substitui nem o reduz** — quem define *quem entra* na fila é sempre o backend, pelos
+gatilhos. Esse desenho vale nas duas fases: muda a origem do dado (Excel → API/MySQL), não a regra
+de que o servidor compila a fila e a IA a formata.
 
 ---
 
@@ -224,33 +240,34 @@ agente sem export manual — depende de **contato com o Megazap** para o recebim
 
 ## 7. Pontos de integração com APIs externas
 
-O **N1 é a espinha dorsal**, mas entra em **três exports distintos** (cada um com categoria e
-prioridade de fonte próprias, conforme o field mapping). As demais fontes penduram recência e
-contexto neles, pelo casamento em cascata. A tabela abaixo é o resumo; o detalhamento campo a
-campo, a resolução de conflito por prioridade e a evidência dos dados reais estão no
-**3‑cruzamento‑de‑dados**.
+O **N1 é a espinha dorsal** (cadastro, contrato, valor, CNPJ). As demais fontes penduram
+recência e contexto nele, pelo casamento em cascata.
 
-| Fonte (categoria · prioridade)                     | Dado que fornece                                                                                   | Chave de junção                                           | Método (a confirmar)                                       | Fase       |
-|----------------------------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------------------------------------|------------------------------------------------------------|------------|
-| **N1 – Contatos** (`CADASTRO_ORGANIZACAO` · **1**) | Cadastro PJ: razão social, **nome fantasia**, CNPJ/CPF, telefone, e‑mail, **código do cliente**    | **Código interno** (amarra o N1) · CNPJ · telefone        | Export xlsx → API REST                                     | Fase 1 → 2 |
-| **N1 – Saídas por NF** (`NOTA_FISCAL` · **2**)     | Produto vendido, **valor da NF (somado = valor do contrato)**, data da última NF                   | Código interno (prefixo no nome; razão social = só texto) | Export xlsx → API REST                                     | Fase 1 → 2 |
-| **N1 – Sistema contratado** (`PRODUTO` · **3**)    | Serviço/plano, **início/fim de vigência**, telefone principal                                      | Código interno (prefixo no nome)                          | Export xlsx → API REST                                     | Fase 1 → 2 |
-| **Megazap** (`WHATSAPP` · **4**)                   | **Registro de atendimento/conversa** (data de abertura), **problema relatado**, CNPJ quando houver | Telefone · CNPJ                                           | Export → API/webhook                                       | Fase 1 → 2 |
-| **NPS (formulário)** (`NPS` · **5**)               | Nota + comentário + carimbo (engajamento)                                                          | **Nome fantasia** normalizado (NPS não traz CNPJ)         | Planilha do formulário                                     | Fase 1     |
-| **People CRM** (auxiliar, futura)                  | Última interação / posição no funil                                                                | Telefone / CNPJ                                           | Export → API                                               | Fase 2     |
-| **Megazap (saída)**                                | Recebe o **rascunho** aprovado para envio manual                                                   | Telefone                                                  | Manual (copiar/colar) → API                                | Fase 1 → 2 |
-| **Megazap (conversa)**                             | Mensagens do cliente **durante o atendimento**                                                     | Telefone                                                  | Fase 1–2: export/copiar manual · Fase 3: API/webhook → MCP | Fase 1 → 3 |
+| Fonte                  | Dado que fornece                                                                                                   | Chave de junção                | Método (a confirmar)                                       | Fase       |
+|------------------------|--------------------------------------------------------------------------------------------------------------------|--------------------------------|------------------------------------------------------------|------------|
+| **N1 (ERP)**           | Cadastro PJ, contratos, valor, datas de fatura/chamado/renovação, **visita**, **atualização cadastral/contratual** | **CNPJ**                       | Export xlsx → API REST                                     | Fase 1 → 2 |
+| **Megazap**            | Data da **última mensagem** por número; **recebida × enviada**                                                     | **Telefone**                   | Export → API/webhook                                       | Fase 1 → 2 |
+| **People CRM**         | Última interação / posição no funil                                                                                | Telefone / CNPJ                | Export → API                                               | Fase 1 → 2 |
+| **NPS (formulário)**   | Nota + comentário + data (engajamento)                                                                             | CNPJ (opcional) / razão social | Planilha do formulário                                     | Fase 1     |
+| **Megazap (saída)**    | Recebe o **rascunho** aprovado para envio manual                                                                   | Telefone                       | Manual (copiar/colar) → API                                | Fase 1 → 2 |
+| **Megazap (conversa)** | Mensagens do cliente **durante o atendimento** (conteúdo)                                                          | Telefone                       | Fase 1–2: export/copiar manual · Fase 3: API/webhook → MCP | Fase 1 → 3 |
 
 **Cruzamento de registros (o ponto mais complexo):** cada fonte usa uma chave diferente, então o
-cruzamento segue uma **cascata** — CNPJ (exato) → telefone (provável) → **nome fantasia / razão
-social normalizados** (incerto) — e, dentro do N1, o **código do cliente** amarra as três
-planilhas. Quando várias fontes trazem o mesmo campo, vence a de **menor prioridade** (N1‑Contatos
-manda na identidade). Cada casamento carrega uma **marca de confiança**; só *exato* e *provável*
-entram na fila automática — *incerto* vai para **conferência humana**. Nos dados reais da PoC o
-CNPJ quase não casa entre fontes (N1 traz número fictício, NPS não traz CNPJ), então o casamento
-recai sobre **nome normalizado** — o que faz da **padronização de razão social/fantasia** o ponto
-mais crítico. A de-para `telefone→cliente` é um ativo versionado (um telefone pode atender mais de
-uma empresa; uma empresa pode ter vários contatos).
+cruzamento segue uma **cascata** — CNPJ (exato) → telefone (provável) → razão social normalizada
+(incerto). Cada casamento carrega uma **marca de confiança**; só *exato* e *provável* entram na
+fila automática — *incerto* vai para **conferência humana**. A de-para `telefone→cliente` é um
+ativo versionado (um telefone pode atender mais de uma empresa; uma empresa pode ter vários
+contatos).
+
+**Chave interna do N1 × chave de identidade/busca por CNPJ (Fase 1).** Na Fase 1, o N1 vem em **três exports**
+que são amarrados entre si pelo **código interno do cliente** — a **coluna `Cod`** do N1‑Contatos, que
+reaparece como **prefixo `11111- `** nas colunas `Cliente` (N1‑Sistema) e `Pessoa` (N1‑NF). Esse código
+é uma **chave só de ingestão** para dentro do back-end: vale para juntar os excel cadastro ↔ contrato ↔ nota fiscal. 
+A partir do cliente já consolidado, a **identidade** e a **busca do agente** (`ficha_cliente`, `situacao_nps`)
+passam a usar o **CNPJ** (ou a **razão social** na busca) — o código serve apenas de **reserva** quando o cliente 
+não tem CNPJ, e nunca é exposto ao agente. Detalhe completo do fluxo de chaves no **3‑cruzamento (§4 e §4.1)**.
+(Na Fase 2, a API do N1 tende a devolver o cliente já consolidado por CNPJ, e o código interno deixa de
+ser necessário para o join.)
 
 **Integração de saída:** o rascunho aprovado pode ser copiado manualmente no Megazap (Fase 1)
 ou, se o Megazap expuser API, criado como **rascunho** para envio humano (Fase 2). Nunca envio
@@ -269,10 +286,8 @@ o envio é sempre humano.
 
 ## 8. Modelo de dados (conceitual)
 
-- **Cliente 360:** visão consolidada por cliente — cadastro (razão social, nome fantasia, CNPJ, representante, telefone), contratos e produtos, valor, antiguidade, status, e a **recência consolidada** (o mais recente entre os sinais de engajamento). Os campos seguem o **dicionário canônico** do field mapping, agrupados em CONTATO / PRODUTO / AVALIAÇÃO (ver 3‑cruzamento‑de‑dados §3).
-- **Sinais de engajamento:** resposta de NPS, movimento no N1 (venda/contrato) e **cada atendimento registrado no Megazap** (o registro **é uma conversa**; não distinguimos “recebida × enviada” dentro do chamado — o próprio registro já comprova a interação). Um **disparo** unilateral (marketing/mensagem automática) **não** é sinal; o atendimento registrado é. A data primária de cada fonte (`InicioVigencia`) é interpretada conforme a categoria (início de contrato, data de NF, abertura do atendimento, carimbo de NPS).
-- **Valor do contrato:** é a **soma de todas as notas fiscais** do cliente — o backend acumula o `Valor Total NF` no campo `ValorTotalNF` (regra dos comentários do field mapping; ver 3‑cruzamento‑de‑dados §3.1). É esse total que alimenta o eixo de valor do RFM.
-- **Proxy da Fase 1 (lacuna honesta do field mapping):** **não há coluna de “visita” nem de “preventiva”** — a última visita e a preventiva vencida (Gatilho B) são **derivadas** das datas disponíveis (última NF/vigência), com janela atual de **12 meses**.
+- **Cliente 360:** visão consolidada por cliente — cadastro (razão social, CNPJ, representante, telefone), contratos e produtos, valor, antiguidade, status, e a **recência consolidada** (o mais recente entre os sinais de engajamento).
+- **Sinais de engajamento:** apenas os que partem do cliente (resposta de NPS, visita/atualização no N1, mensagem recebida no Megazap). Envio nunca é sinal.
 - **De-para telefone→cliente:** resolve o casamento por telefone e a ambiguidade de números compartilhados.
 - **Marca de confiança do casamento:** exato / provável / incerto — governa o que entra na fila automática.
 
@@ -317,7 +332,7 @@ Defesa em camadas, aplicada conforme a fase.
 Estratégia por camada, no stack atual (JUnit 5 + Mockito + Cucumber), nas duas fases:
 
 - **Unitários (núcleo):** normalização de chaves (CNPJ/telefone/razão social); **recência garantindo que envio não conta**; classificação de inatividade por segmento; cruzamento das fontes de dados.
-- **Integração (comportamento das tools):** Cucumber com cenários de negócio legíveis pelo time (ex.: "cliente que só recebeu disparos de marketing, sem atendimento no Megazap, continua inativo"; "cliente com atendimento registrado no Megazap conta como conversa e sai da inatividade"; "resposta de NPS sem CNPJ casa por nome fantasia").
+- **Integração (comportamento das tools):** Cucumber com cenários de negócio legíveis pelo time (ex.: "cliente que só recebeu disparos continua inativo"; "resposta de NPS sem CNPJ casa por razão social").
 
 ---
 
@@ -333,14 +348,14 @@ A consolidação "Cliente 360" entra como **finalidade própria** nessa matriz.
 ## 12. Perguntas a serem respondidas
 
 **Fornecedores (descoberta de API)**
-- **N1:** expõe API REST? Traz e **data** visitas, atualizações cadastrais/contratuais, última fatura/chamado/renovação e valor por cliente? *(No export atual não há coluna de visita/preventiva nem de mensalidade — hoje supridos por proxy; confirmar se a API traz.)* Auth, sandbox, webhooks?
+- **N1:** expõe API REST? Traz e **data** visitas, atualizações cadastrais/contratuais, última fatura/chamado/renovação e valor por cliente? Auth, sandbox, webhooks?
 - **Megazap:** expõe a **data da última mensagem** por número? Distingue **recebida × enviada**? Tem webhook de recebimento? Permite criar **rascunho**/enviar por API?
 - **People:** expõe **última interação** e **posição no funil** por contato? Distingue resposta do cliente de contato feito por nós?
 - **NPS:** onde ficam as respostas (formulário/planilha)? O CNPJ está preenchido? Como exportar de forma padronizada?
 
-**Negócio (comercial)** — *defaults atuais da PoC entre parênteses, a calibrar:*
-- Limiar de **antiguidade** ("cliente antigo", hoje **24 meses**)? Limiar de **meses sem engajamento** ("sem contato recente", hoje **8 meses**)? Janela de **preventiva** (hoje **12 meses**, por proxy da última visita)?
-- Peso relativo na priorização (hoje **recência 0,4 · antiguidade 0,3 · valor 0,3**, valor = soma das NF)? **Limite de frequência** de contato por cliente?
+**Negócio (comercial)**
+- Limiar de **antiguidade** ("cliente antigo")? Limiar de **meses sem engajamento** ("sem contato recente")?
+- Peso relativo na priorização (valor × recência)? **Limite de frequência** de contato por cliente?
 - Confirmar os **segmentos** do Preventivo e a abordagem de cada.
 
 **Jurídico / Acta**
@@ -377,14 +392,15 @@ A consolidação "Cliente 360" entra como **finalidade própria** nessa matriz.
 
 ## 14. Riscos e decisões
 
-| Risco / decisão                                             | Encaminhamento                                                                                                                                          |
-|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Qualidade do cruzamento de registros** (maior risco)      | Cascata CNPJ→telefone→razão social + marca de confiança + revisão humana dos incertos; medir taxa em amostra real                                       |
-| N1/Megazap/People podem não expor "última interação" datada | Confirmar na descoberta; usar o que houver; fontes mistas (Excel + API)                                                                                 |
-| Endpoint remoto exige exposição pública                     | Gateway/firewall + TLS + OAuth desde o primeiro dia da Fase 2                                                                                           |
-| Telefone compartilhado entre empresas                       | De-para `telefone→cliente` versionada                                                                                                                   |
-| Base legal (contato proativo, Cliente 360)                  | Confirmar com a Acta antes de dado real (portão)                                                                                                        |
-| Confundir disparo com conversa                              | Regra na modelagem: **enviar ≠ conversa** — o **atendimento registrado no Megazap conta como conversa**; só o disparo de marketing/automático não conta |
-| Envio automático ao cliente                                 | Fora de escopo: sempre rascunho + validação humana                                                                                                      |
+| Risco / decisão                                             | Encaminhamento                                                                                                    |
+|-------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| **Qualidade do cruzamento de registros** (maior risco)      | Cascata CNPJ→telefone→razão social + marca de confiança + revisão humana dos incertos; medir taxa em amostra real |
+| N1/Megazap/People podem não expor "última interação" datada | Confirmar na descoberta; usar o que houver; fontes mistas (Excel + API)                                           |
+| Endpoint remoto exige exposição pública                     | Gateway/firewall + TLS + OAuth desde o primeiro dia da Fase 2                                                     |
+| Telefone compartilhado entre empresas                       | De-para `telefone→cliente` versionada                                                                             |
+| Base legal (contato proativo, Cliente 360)                  | Confirmar com a Acta antes de dado real (portão)                                                                  |
+| Confundir disparo com contato                               | Regra na modelagem: **enviar ≠ contato**                                                                          |
+| **IA montar fila incompleta** (escolher uma tool parcial)   | **Backend compila e envia a fila** por uma tool consolidada (`preventivo_contatos`, push); tools abertas só para **enriquecer** sob demanda (pull), nunca para reduzir — §4.5 |
+| Envio automático ao cliente                                 | Fora de escopo: sempre rascunho + validação humana                                                                |
 
 

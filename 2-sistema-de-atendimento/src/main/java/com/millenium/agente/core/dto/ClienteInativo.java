@@ -1,4 +1,4 @@
-package com.millenium.agente.core.model;
+package com.millenium.agente.core.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

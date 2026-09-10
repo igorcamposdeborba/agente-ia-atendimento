@@ -1,6 +1,6 @@
 package com.millenium.agente.core.recencia;
 
-import com.millenium.agente.core.model.SinalEngajamento;
+import com.millenium.agente.core.dto.SinalEngajamento;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
