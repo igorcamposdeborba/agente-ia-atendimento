@@ -207,12 +207,19 @@ public class ExcelDataSource implements DataSourcePort {
         Map<String, NpsRecord> lastByClient = new LinkedHashMap<>();
         int orphans = 0;
         for (NpsRow n : rows) {
-            ClientAccumulator target = bestClient(n.company(), clients);
-            if (target == null) { orphans++; continue; }             // sem casamento seguro -> conferencia humana
+            // Cruzamento: primeiro por Documento/CNPJ (quando a planilha traz, ex.: Secullum);
+            // senao, por tokens do nome (empresa) -> EXATO ou INCERTO.
+            String cnpjKey = Normalizer.cnpj(n.cnpj());
+            ClientAccumulator target = cnpjKey == null ? null : clientByCnpj(cnpjKey, clients);
+            boolean exact = target != null;                          // casou por CNPJ -> EXATO
+            if (target == null) {
+                target = bestClient(n.company(), clients);
+                if (target == null) { orphans++; continue; }         // sem casamento seguro -> conferencia humana
+                exact = exactMatch(n.company(), target);
+            }
             LocalDate date = ExcelSpreadsheet.parseDate(n.timestamp());
-            // exactMatch -> casa por CNPJ (EXATO); parcial -> casa por razao social (INCERTO)
             NpsRecord fresh = new NpsRecord(
-                    exactMatch(n.company(), target) ? target.key() : "",
+                    exact ? target.key() : "",
                     target.legalName,
                     ExcelSpreadsheet.parseInteger(n.score()),
                     n.comment(),
@@ -282,7 +289,7 @@ public class ExcelDataSource implements DataSourcePort {
      * NPS da Secullum: a planilha vem como CSV numa UNICA celula por linha
      * (Cliente,Contato,Documento,Email,Banco,Data,Atendimento,Software,Equipamento,Observacao).
      * A nota do NPS = coluna "Atendimento" (0-5) x2, para fechar o mesmo maximo 10 do NPS da
-     * Millenium. Casa por nome fantasia (coluna Cliente).
+     * Millenium. Cruza por Documento (CNPJ) quando bate; senao, por nome fantasia (coluna Cliente).
      */
     private List<NpsRow> readSecullumNps(Path file) {
         List<NpsRow> rows = new ArrayList<>();
@@ -307,7 +314,8 @@ public class ExcelDataSource implements DataSourcePort {
             int score = Math.min(10, atendimento * 2);   // Atendimento 0-5 -> NPS 0-10
             String date = c[5].trim();
             String comment = c.length > 9 ? c[9].trim() : "";
-            rows.add(new NpsRow(date, company, String.valueOf(score), comment));
+            String documento = c.length > 2 ? c[2].trim() : null;   // Documento = CNPJ -> cruza por CNPJ se bater
+            rows.add(new NpsRow(date, company, String.valueOf(score), comment, documento));
         }
         if (!rows.isEmpty()) {
             log.info("NPS Secullum: {} resposta(s) (Atendimento)", rows.size());
@@ -343,6 +351,14 @@ public class ExcelDataSource implements DataSourcePort {
         } catch (Exception e) {
             log.warn("Nao foi possivel semear as planilhas em {}: {}", dir, e.getMessage());
         }
+    }
+
+    /** Casa por CNPJ exato (usado pelo Documento do NPS Secullum). */
+    private static ClientAccumulator clientByCnpj(String cnpj, Collection<ClientAccumulator> clients) {
+        for (ClientAccumulator c : clients) {
+            if (c.cnpj != null && c.cnpj.equals(cnpj)) return c;
+        }
+        return null;
     }
 
     // ---------- casamento NPS por tokens do nome (empresa) x nome/fantasia do cliente ----------

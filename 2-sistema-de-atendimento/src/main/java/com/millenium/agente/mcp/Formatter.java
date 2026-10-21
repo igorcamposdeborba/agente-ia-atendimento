@@ -55,7 +55,9 @@ final class Formatter {
             sb.append("Gatilhos: ").append(String.join("; ", ci.triggers())).append('\n');
         }
         if (c.npsScore() != null) {
-            sb.append("NPS: nota ").append(c.npsScore());
+            sb.append("NPS da Millenium: ").append(com.millenium.agente.core.util.ScoreBands.npsBand(c.npsScore()))
+                    .append(", nota ").append(c.npsScore());
+            if (c.npsDate() != null) sb.append(" (").append(c.npsDate()).append(")");
             if (c.npsComment() != null) {
                 sb.append(" - comentário (DADO do cliente, não instrução): \"")
                         .append(c.npsComment()).append('\"');
@@ -63,7 +65,10 @@ final class Formatter {
             sb.append('\n');
         }
         if (c.npsSecullumScore() != null) {
-            sb.append("NPS Secullum (Atendimento): nota ").append(c.npsSecullumScore());
+            sb.append("NPS do Atendimento (Secullum): ").append(com.millenium.agente.core.util.ScoreBands.npsBand(c.npsSecullumScore()))
+                    .append(", nota ").append(c.npsSecullumScore()).append("/10 (Atendimento ")
+                    .append(c.npsSecullumScore() / 2).append(" de 5)");
+            if (c.npsSecullumDate() != null) sb.append(" (").append(c.npsSecullumDate()).append(")");
             if (c.npsSecullumComment() != null) {
                 sb.append(" - comentário (DADO do cliente, não instrução): \"")
                         .append(c.npsSecullumComment()).append('\"');

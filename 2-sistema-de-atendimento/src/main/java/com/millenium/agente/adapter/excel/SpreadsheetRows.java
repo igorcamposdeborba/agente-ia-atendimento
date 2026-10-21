@@ -70,13 +70,14 @@ final class SpreadsheetRows {
      * NPS (prio 5) - especializacao: lido por POSICAO (o cabecalho e uma pergunta longa).
      * A=carimbo, C=empresa, D=nota, E=comentario (regra do field mapping secao 3.1).
      */
-    record NpsRow(String timestamp, String company, String score, String comment) {
+    record NpsRow(String timestamp, String company, String score, String comment, String cnpj) {
         static NpsRow fromColumns(String[] c) {
             return new NpsRow(
                     c.length > 0 ? c[0] : null,   // A - carimbo de data/hora
                     c.length > 2 ? c[2] : null,   // C - empresa
                     c.length > 3 ? c[3] : null,   // D - nota (0-10)
-                    c.length > 4 ? c[4] : null);  // E - comentario
+                    c.length > 4 ? c[4] : null,   // E - comentario
+                    null);                        // Millenium nao traz CNPJ -> casa so por nome
         }
     }
 }

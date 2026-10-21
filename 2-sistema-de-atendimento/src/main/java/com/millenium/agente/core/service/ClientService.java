@@ -238,10 +238,10 @@ public class ClientService {
         }
         if (!c.products().isEmpty()) ev.add("produtos: " + String.join(", ", c.products()));
         if (c.npsScore() != null) {
-            ev.add("NPS nota " + c.npsScore() + (c.npsComment() != null ? " - \"" + c.npsComment() + "\"" : ""));
+            ev.add("NPS da Millenium: nota " + c.npsScore() + (c.npsComment() != null ? " - \"" + c.npsComment() + "\"" : ""));
         }
         if (c.npsSecullumScore() != null) {
-            ev.add("NPS Secullum (Atendimento) nota " + c.npsSecullumScore()
+            ev.add("NPS do Atendimento (Secullum): nota " + c.npsSecullumScore() + "/10 (Atendimento " + (c.npsSecullumScore() / 2) + " de 5)"
                     + (c.npsSecullumComment() != null ? " - \"" + c.npsSecullumComment() + "\"" : ""));
         }
         ev.addAll(c.matchedSources());

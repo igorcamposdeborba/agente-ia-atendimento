@@ -10,7 +10,7 @@ com o cliente — produz um documento e rascunhos para o atendente revisar e dis
 as regras da instrução de guardrails do Projeto.
 
 ## Onde buscar
-- **Dados do cliente:** pelas tools do MCP, que leem os Excel em `fonte/` (N1 em três exports — cadastro, saídas por NF, sistema contratado —, Megazap e NPS; People é auxiliar/opcional).
+- **Dados do cliente:** pelas tools do MCP, que leem os Excel em `fonte/` (N1 em quatro exports — cadastro, saídas por NF, sistema contratado e ordem de serviço —, Megazap e **duas pesquisas de NPS: Millenium e do Atendimento/Secullum**; People é auxiliar/opcional).
 - **Conhecimento (tom, tratativas, perguntas, princípios):** pela tool `consultar_wiki`, que lê a pasta `wiki/`.
 
 ## Dois gatilhos (entra quem disparar A **ou** B)
@@ -49,7 +49,7 @@ Regra única: a consulta **enriquece** a fila, **nunca a substitui nem reduz**. 
 ### Como gerar o `.docx` (obrigatório)
 Chame a tool **`salvar_documento_docx`** do MCP — ela grava o Word no computador (via Apache POI, **sem Python e sem depender de "code execution"**) e retorna o caminho. Passe:
 - `titulo`: "RASCUNHO — Contato proativo (Preventivo)". Só cite um gatilho no título ("· inatividade" ou "· preventiva vencida") quando o atendente **restringiu** a fila a esse gatilho; na fila completa (A∪B), não rotule como se fosse um gatilho só.
-- `conteudo`: o plano em texto com **marcação leve** — comece com uma linha de aviso "Rascunho para revisão humana. Nada foi enviado."; `## ` por cliente (na ordem RFM), `- ` para os campos, e "Rótulo: valor" para deixar o rótulo em negrito. Marque **[CONFERIR: match incerto]** no título do cliente quando `precisaConferenciaHumana` (ex.: NPS casado por nome).
+- `conteudo`: o plano em texto com **marcação leve** — comece com uma linha de aviso "Rascunho para revisão humana. Nada foi enviado."; `## ` por cliente (na ordem RFM), `- ` para os campos, e "Rótulo: valor" para deixar o rótulo em negrito. Marque **[CONFERIR: match incerto]** no título do cliente quando `precisaConferenciaHumana` (ex.: NPS casado por nome). Para o NPS, apresente **dois campos separados** (como vieram no dossiê): `NPS da Millenium: ...` e `NPS do Atendimento (Secullum): ...` — nunca os misture.
 - `nomeArquivo`: **"plano de atendimento"** (a tool adiciona sozinha o índice e a data/hora — ex.: `1- plano de atendimento - 15-08-2026 as 17-54.docx`).
 
 Regras do conteúdo:

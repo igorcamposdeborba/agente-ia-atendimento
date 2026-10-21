@@ -44,7 +44,10 @@ public class ExportTools {
             "Razão social", "CNPJ", "Representante", "Telefone", "Produtos", "Valor (soma NF)",
             "Status", "Antiguidade (meses)", "Inatividade (meses)", "Última interação", "Última visita",
             "Preventiva vencida", "RFM recência", "RFM antiguidade", "RFM valor", "RFM score",
-            "Gatilhos", "NPS nota", "NPS faixa", "NPS data", "NPS comentário", "Confiança",
+            "Gatilhos",
+            "NPS nota (Millenium)", "NPS faixa (Millenium)", "NPS data (Millenium)", "NPS comentário (Millenium)",
+            "NPS nota (Secullum)", "NPS faixa (Secullum)", "NPS data (Secullum)", "NPS comentário (Secullum)",
+            "Confiança",
             "Conferir?", "Fontes casadas");
 
     private final MilleniumProperties props;
@@ -89,9 +92,13 @@ public class ExportTools {
                     String.valueOf(ci.rfm().score()),
                     String.join("; ", ci.triggers()),
                     c.npsScore() == null ? "" : String.valueOf(c.npsScore()),
-                    ScoreBands.npsBand(c.npsScore()),
+                    c.npsScore() == null ? "" : ScoreBands.npsBand(c.npsScore()),
                     c.npsDate() == null ? "" : c.npsDate().toString(),
-                    c.npsComment(),
+                    c.npsComment() == null ? "" : c.npsComment(),
+                    c.npsSecullumScore() == null ? "" : String.valueOf(c.npsSecullumScore()),
+                    c.npsSecullumScore() == null ? "" : ScoreBands.npsBand(c.npsSecullumScore()),
+                    c.npsSecullumDate() == null ? "" : c.npsSecullumDate().toString(),
+                    c.npsSecullumComment() == null ? "" : c.npsSecullumComment(),
                     c.confidence() == null ? "" : c.confidence().name(),
                     ci.needsHumanReview() ? "SIM" : "NAO",
                     String.join("; ", c.matchedSources())));
