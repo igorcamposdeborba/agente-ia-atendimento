@@ -26,4 +26,6 @@ public record InactiveClient(
         List<String> evidence,
         boolean needsHumanReview
 ) {
+    /** Telefone mascarado (so os 4 ultimos digitos) para o canal MCP<->IA. */
+    public String maskedPhone() { return Client360.maskPhone(phone); }
 }

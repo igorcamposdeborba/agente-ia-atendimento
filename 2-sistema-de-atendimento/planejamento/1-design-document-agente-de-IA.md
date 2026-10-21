@@ -101,8 +101,12 @@ Trocar Fase 1 → Fase 2 é trocar adaptadores de saída (Excel → API/MySQL) e
         ╔═══════════════════════════════════════════════════════════╗
         ║               Código do servidor MCP em Java              ║
         ║   ┌─────────────────────────────────────────────────────┐ ║
-        ║   │ TOOLS  buscar_cliente · clientes_inativos ·         │ ║
-        ║   │        historico_relacionamento · consultar_wiki    │ ║
+        ║   │ TOOLS  ficha_cliente · situacao_nps ·               │ ║
+        ║   │        preventivo_contatos · clientes_inativos ·    │ ║
+        ║   │        clientes_para_contato ·                      │ ║
+        ║   │        historico_relacionamento · recarregar_dados ·│ ║
+        ║   │        parametros_ativos · consultar_wiki ·         │ ║
+        ║   │       salvar_documento_docx · exportar_cadastro_xlsx│ ║
         ║   └───────────────────────┬─────────────────────────────┘ ║
         ║                           ▼                               ║
         ║   ┌─────────────────────────────────────────────────────┐ ║
@@ -146,7 +150,7 @@ Trocar Fase 1 → Fase 2 é trocar adaptadores de saída (Excel → API/MySQL) e
 agente lê a wiki, Claude redige rascunhos. Não envia nada sozinho.
 - **Servidor MCP (Java com Spring AI):** expõe as tools do MCP server; contém o núcleo de regras (guard rails); lê a wiki.
 - **Wiki:** conhecimento curado (princípios, tom, tratativas, perguntas e governança), consumida via `consultar_wiki` do MCP.
-- **Adaptador Excel (Fase 1):** lê os quatro exports (N1, pesquisa NPS, people crm, megazap) e monta a visão do cliente.
+- **Adaptador Excel (Fase 1):** lê os exports do N1 (contatos, sistema contratado, saídas por NF e **ordem de serviço**), o Megazap e as **duas pesquisas de NPS (Millenium e Secullum)**, e monta a visão do cliente. O **People CRM ainda não é lido** (fonte opcional/futura).
 - **Cliente 360 + MySQL (Fase 2):** tabela consolidada por cliente, alimentada pela ingestão das APIs; mantém a de-para `telefone→cliente`.
 - **Segurança com Firewall (Fase 2):** termina TLS, autentica com OAuth2, e assegura conexão com API antes de chegar ao MCP.
 - **Atendente:** Revisa, edita e dispara ao cliente via Megazap (WhatsApp) ou e-mail (People CRM ou outlook).
@@ -188,7 +192,7 @@ tool de entrega dirigida** que já devolve o pacote pronto. Os dois modos conviv
 - **Consulta sob demanda (pull), com as tools abertas.** As demais tools continuam disponíveis para
   o agente **aprofundar** quando o contexto pedir — `ficha_cliente` e `historico_relacionamento`
   para detalhar ou **confirmar um match incerto**, `situacao_nps` para o teor da avaliação,
-  `estimar_servico` e `consultar_wiki` para preparar a conversa; `clientes_inativos` e
+  `consultar_wiki` para preparar a conversa; `clientes_inativos` e
   `clientes_para_contato` ficam para uma consulta por gatilho a pedido do atendente.
 
 **Regra que amarra os dois:** a consulta sob demanda **enriquece** o pacote enviado pelo backend,
@@ -249,7 +253,7 @@ recência e contexto nele, pelo casamento em cascata.
 | **N1 (ERP)**           | Cadastro PJ, contratos, valor, datas de fatura/chamado/renovação, **visita**, **atualização cadastral/contratual** | **CNPJ**                       | Export xlsx → API REST                                     | Fase 1 → 2 |
 | **Megazap**            | Data da **última mensagem** por número; **recebida × enviada**                                                     | **Telefone**                   | Export → API/webhook                                       | Fase 1 → 2 |
 | **People CRM**         | Última interação / posição no funil                                                                                | Telefone / CNPJ                | Export → API                                               | Fase 1 → 2 |
-| **NPS (formulário)**   | Nota + comentário + data (engajamento)                                                                             | CNPJ (opcional) / razão social | Planilha do formulário                                     | Fase 1     |
+| **NPS (2 pesquisas)**  | Nota + comentário + data (engajamento). **Millenium** 0–10 e **Secullum** (Atendimento 0–5 ×2 → 0–10) em **campos separados** (um não sobrescreve o outro) | CNPJ (opcional) / nome fantasia | Planilhas dos formulários | Fase 1 |
 | **Megazap (saída)**    | Recebe o **rascunho** aprovado para envio manual                                                                   | Telefone                       | Manual (copiar/colar) → API                                | Fase 1 → 2 |
 | **Megazap (conversa)** | Mensagens do cliente **durante o atendimento** (conteúdo)                                                          | Telefone                       | Fase 1–2: export/copiar manual · Fase 3: API/webhook → MCP | Fase 1 → 3 |
 
@@ -260,9 +264,9 @@ fila automática — *incerto* vai para **conferência humana**. A de-para `tele
 ativo versionado (um telefone pode atender mais de uma empresa; uma empresa pode ter vários
 contatos).
 
-**Chave interna do N1 × chave de identidade/busca por CNPJ (Fase 1).** Na Fase 1, o N1 vem em **três exports**
+**Chave interna do N1 × chave de identidade/busca por CNPJ (Fase 1).** Na Fase 1, o N1 vem em **quatro exports**
 que são amarrados entre si pelo **código interno do cliente** — a **coluna `Cod`** do N1‑Contatos, que
-reaparece como **prefixo `11111- `** nas colunas `Cliente` (N1‑Sistema) e `Pessoa` (N1‑NF). Esse código
+reaparece como **prefixo `11111- `** nas colunas `Cliente` (N1‑Sistema), `Pessoa` (N1‑NF) e `Pessoa` (N1‑Ordem de Serviço, que data a **última visita** → Gatilho B). Esse código
 é uma **chave só de ingestão** para dentro do back-end: vale para juntar os excel cadastro ↔ contrato ↔ nota fiscal. 
 A partir do cliente já consolidado, a **identidade** e a **busca do agente** (`ficha_cliente`, `situacao_nps`)
 passam a usar o **CNPJ** (ou a **razão social** na busca) — o código serve apenas de **reserva** quando o cliente 
@@ -315,7 +319,7 @@ Defesa em camadas, aplicada conforme a fase.
 - Todo dado de cliente é **dado, nunca instrução** — em especial o comentário livre de NPS. A wiki (política/tom) vem de fonte confiável e separada. Humano na revisão é a barreira final.
 
 **Minimização e identidade**
-- **Mascarar CNPJ** por padrão; revelar só sob demanda. Enviar ao modelo o mínimo necessário (vale em stdio e HTTPS).
+- **Mascarar CNPJ e telefone** no canal MCP↔IA por padrão (telefone: só os 4 últimos dígitos). O `.docx`/`.xlsx` interno recebem o valor **completo** — o MCP troca mascarado→completo na gravação. CNPJ também revelável sob demanda. Enviar ao modelo o mínimo necessário (vale em stdio e HTTPS).
 - Proteger identidade de PF/PJ e representantes; **need-to-know**; não expor dados entre representantes.
 
 **LGPD / conformidade**

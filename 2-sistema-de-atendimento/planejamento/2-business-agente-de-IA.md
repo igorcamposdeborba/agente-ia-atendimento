@@ -30,11 +30,11 @@ Duas dimensões, **ambas** necessárias:
 
 **Antiguidade (é "cliente antigo"):**
 
-- Tempo de relacionamento / data do primeiro contrato ou primeira compra ≥ *limiar* (ex.: **≥ 2 anos** de casa).
+- Tempo de relacionamento / data do primeiro contrato ou primeira compra ≥ *limiar* (atualmente **≥ 13 meses** de casa).
 
 **Recência baixa (é "sem contato recente"):**
 
-- Tempo desde o **último sinal de engajamento do próprio cliente** ≥ *limiar* (ex.: **≥ 8–12 meses**). Contam **só** sinais que partem do cliente ou registram interação real:  
+- Tempo desde o **último sinal de engajamento do próprio cliente** ≥ *limiar* (atualmente **≥ 4 meses**). Contam **só** sinais que partem do cliente ou registram interação real:  
   - **resposta ao NPS** (o cliente respondeu — não que enviamos a pesquisa);  
   - **visita à empresa registrada no N1**;  
   - **atualização cadastral no N1**;  
@@ -47,7 +47,7 @@ Duas dimensões, **ambas** necessárias:
 
 ### Gatilho B — Manutenção vencida (independe de recência)
 
-Entra na fila quem tem **preventiva vencida ou nunca realizada** — **mesmo estando em contato recente**. Aqui a recência **não exclui**: um cliente ativo com manutenção atrasada precisa ser acionado para não chegar à falha. O sinal vem do **N1** (janela de preventiva por produto, definida em `parametros/limiares.md`).
+Entra na fila quem tem **preventiva vencida ou nunca realizada** — **mesmo estando em contato recente**. Aqui a recência **não exclui**: um cliente ativo com manutenção atrasada precisa ser acionado para não chegar à falha. O sinal vem do **N1** — proxy pela **última visita** (inclui a planilha de **Ordem de Serviço**); janela de preventiva **global**, atualmente **4 meses**, definida em `wiki/parametros.md`.
 
 >   
 > Um cliente pode disparar **A, B ou os dois**. A fila **deduplica**: um único contato leva os dois assuntos, respeitando o limite de frequência — nunca dois toques para a mesma pessoa.
@@ -61,7 +61,7 @@ Entra na fila quem tem **preventiva vencida ou nunca realizada** — **mesmo est
 | **F — Frequência**  | Nº de compras/chamados/renovações no período                                      | Distingue quem era engajado e esfriou |
 | **V — Valor**       | Valor do contrato / faturamento / ticket-médio                                    | Prioriza quem tem maior impacto (LTV) |
 
-Assim, a fila prioriza **cliente antigo, valioso, que era ativo e ficou muito tempo sem contato** — o de maior retorno. Todos os **limiares são decisão do comercial** (André/Sandro/Calebe) e ficam em `wiki/parametros/limiares.md`.
+Assim, a fila prioriza **cliente antigo, valioso, que era ativo e ficou muito tempo sem contato** — o de maior retorno. Todos os **limiares são decisão do comercial** (André/Sandro/Calebe) e ficam em `wiki/parametros.md`.
 
 **Segmentação** (define tom e abordagem — não usa NPS como pré-requisito):
 
@@ -94,11 +94,7 @@ wiki/
 
 ├── produtos/
 
-├── parametros/
-
-│   ├── tempos-padrao.md
-
-│   └── limiares.md             \# antiguidade, recência, faixas RFM (decisão do comercial)
+├── parametros.md               \# antiguidade, recência, janela de preventiva, pesos RFM (fonte única → application.properties)
 
 ├── perguntas-descoberta.md
 
@@ -150,14 +146,14 @@ O atendente pede algo como *"gere a lista de clientes para contato preventivo de
 
 Esse documento é o entregável que hoje não existe: transforma "temos que falar com os clientes" em uma **fila priorizada e justificada**.
 
-> **Push (fila enviada) + pull (consulta aberta).** O backend **empurra** a fila completa pelo `preventivo_contatos`; a partir dela, o agente fica **livre para consultar sob demanda** (`ficha_cliente`, `historico_relacionamento`, `situacao_nps`, `estimar_servico`, `consultar_wiki`) para aprofundar um cliente ou **confirmar um match incerto**. Regra única: a consulta **enriquece** a fila, **nunca a substitui nem reduz** — quem define *quem entra* é o backend, pelos gatilhos.
+> **Push (fila enviada) + pull (consulta aberta).** O backend **empurra** a fila completa pelo `preventivo_contatos`; a partir dela, o agente fica **livre para consultar sob demanda** (`ficha_cliente`, `historico_relacionamento`, `situacao_nps`, `consultar_wiki`) para aprofundar um cliente ou **confirmar um match incerto**. Regra única: a consulta **enriquece** a fila, **nunca a substitui nem reduz** — quem define *quem entra* é o backend, pelos gatilhos.
 
 ### 5.2 Saída B — copiloto de conversa (perguntas e respostas)
 
 Durante o contato, o atendente usa o agente em dois momentos:
 
 - **Antes/início:** "me dê boas perguntas de descoberta para o \[cliente\], considerando que ele tem \[produtos\] e está há \[X meses\] sem contato" → o agente puxa `perguntas-descoberta.md` \+ a ficha e devolve perguntas sob medida, feitas para **revelar problemas não reportados**.  
-- **Durante:** "o cliente disse que a catraca trava no horário de pico, como respondo?" → o agente consulta `tratativas/catraca.md`, produtos e, se for o caso, `estimar_servico`, e sugere uma resposta com CNV (acolher → esclarecer → propor próximo passo).
+- **Durante:** "o cliente disse que a catraca trava no horário de pico, como respondo?" → o agente consulta `tratativas/catraca.md`, produtos e sugere uma resposta com CNV (acolher → esclarecer → propor próximo passo).
 
 Isso estrutura o atendimento em tempo real, mantendo o tom e evitando que cada atendente improvise sozinho.
 
@@ -213,7 +209,7 @@ Inalterado da v2 quanto ao processo (esqueleto → validação com André/Diego/
 
 Como o Preventivo se apoia em **dado de contrato** (não em NPS), o legítimo interesse tende a ser a base central — mas é exatamente o ponto a formalizar com a Acta. 
 Mantêm-se: proteção de identidade, retenção definida, auditoria (quem consultou/gerou/enviou) e termos comerciais/DPA com a Anthropic. 
-Mesmo em MCP local, o resultado das tools vai ao modelo — minimização é obrigatória (CNPJ mascarado por padrão, etc.).
+Mesmo em MCP local, o resultado das tools vai ao modelo — minimização é obrigatória (CNPJ e telefone mascarados por padrão no canal da IA — telefone só com os 4 últimos dígitos; o `.docx`/`.xlsx` interno saem completos).
 
 ---
 
@@ -222,7 +218,7 @@ Mesmo em MCP local, o resultado das tools vai ao modelo — minimização é obr
 **Hierarquia de fontes:**
 
 - **Principal — N1:** visitas registradas, atualizações cadastrais e de contrato.  
-- **Principal — respostas do NPS:** o cliente respondeu (não que enviamos).  
+- **Principal — respostas do NPS:** o cliente respondeu (não que enviamos) — **duas pesquisas, Millenium e Secullum**, com a nota normalizada para a mesma escala **0–10**.  
 - **Auxiliar — People CRM e Megazap:** e, mesmo aqui, só **resposta** do cliente conta; disparo enviado, não.
 
 **Campos por cliente a garantir (export e, depois, API):**
@@ -238,7 +234,7 @@ Mesmo em MCP local, o resultado das tools vai ao modelo — minimização é obr
 - **Fase 1 (Excel):** juntar as planilhas por CNPJ/razão social num script de ETL determinístico; normalizar variações de razão social (acentos, "Ltda/S.A.", espaços, maiúsculas) **antes** do match. O N1 é a base-mestre; NPS e auxiliares enriquecem.  
 - **Fase 2 (integração):** o mesmo cruzamento via **API do N1** (mestre) \+ respostas de NPS, com enriquecimento opcional de People/Megazap, consolidado no backend.
 
-> **Chave interna do N1.** As **três planilhas do N1** (cadastro, contrato, nota fiscal) se amarram entre si pelo **código do cliente** — a coluna **`Cod`** do cadastro, que reaparece como prefixo `11111- ` nas outras duas. Esse código é uma chave **interna de ingestão** para dentro do sistema de back-end; a partir do cliente consolidado, a **identidade** e a **busca do agente** usam o **CNPJ** (ou a razão social), com o código só como reserva quando falta CNPJ. O detalhe técnico está no **3‑cruzamento (§4/§4.1)**.
+> **Chave interna do N1.** As **quatro planilhas do N1** (cadastro, contrato, nota fiscal e ordem de serviço) se amarram entre si pelo **código do cliente** — a coluna **`Cod`** do cadastro, que reaparece como prefixo `11111- ` nas outras duas. Esse código é uma chave **interna de ingestão** para dentro do sistema de back-end; a partir do cliente consolidado, a **identidade** e a **busca do agente** usam o **CNPJ** (ou a razão social), com o código só como reserva quando falta CNPJ. O detalhe técnico está no **3‑cruzamento (§4/§4.1)**.
 
 Fase 1 assume a limitação de campos que faltarem no export; a lista de inativos sai do que houver de sinais de engajamento e melhora conforme a integração amadurece.
 
@@ -249,7 +245,7 @@ Fase 1 assume a limitação de campos que faltarem no export; a lista de inativo
 | Frente                   | Entregas                                                                                                            | Depende de                                       |
 |:-------------------------|:--------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------|
 | **Governança (Inicial)** | Esqueleto → validação → Acta (matriz) → formalização                                                                | Plano aprovado pela Acta para LGPD               |
-| **Wiki**                 | `principios/`, `tom/`, `perguntas-descoberta`, `tratativas/`, `parametros/limiares`                                 | Conteúdo do treinamento \+ limiares do comercial |
+| **Wiki**                 | `principios/`, `tom/`, `perguntas-descoberta`, `tratativas/`, `parametros.md`                                 | Conteúdo do treinamento \+ limiares do comercial |
 | **Dados**                | Campos de recência/antiguidade/valor no export/API do N1                                                            | Descoberta de API                                |
 | **Skills (agentes)**     | Prova de conceito (PoC) → uma `SKILL.md` por agente: **Preventivo** (documento \+ copiloto, gatilhos A+B) → Pós-NPS | Wiki \+ dados                                    |
 | **Treinamento humano**   | Atendimento com comunicação não violenta/empatia/escuta ativa                                                       | Paralelo; alimenta a wiki                        |
@@ -264,7 +260,7 @@ Sequência: **Governança \+ Wiki \+ campos de dados primeiro**; depois o **Agen
 |:------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------|
 | O N1 registra e datazona visitas e atualizações cadastrais/contratuais? | **Confirmar na descoberta**; é o que sustenta a recência. Se faltar, aproximar com as datas que houver |
 | Casar bases sem CNPJ (NPS com CNPJ opcional)                            | Padronizar razão social antes do match; priorizar CNPJ quando existir                                  |
-| Limiares de antiguidade/recência/valor                                  | Decisão do comercial em `parametros/limiares.md`                                                       |
+| Limiares de antiguidade/recência/valor                                  | Decisão do comercial em `wiki/parametros.md`                                                       |
 | Base legal do contato proativo                                          | **Confirmar com a Acta** antes de rodar com dado real (portão)                                         |
 | Baixa resposta de NPS                                                   | NPS conta como sinal de recência quando existe; o **N1 dá a cobertura** do resto                       |
 | Confundir disparo com contato                                           | Regra fixa: **enviar ≠ contato**; recência só por engajamento do cliente                               |

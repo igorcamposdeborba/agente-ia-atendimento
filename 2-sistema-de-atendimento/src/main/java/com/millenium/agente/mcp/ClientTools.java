@@ -56,17 +56,32 @@ public class ClientTools {
         Optional<Client360> c = service.find(termo);
         if (c.isEmpty()) return "Nenhum cliente encontrado para \"" + termo + "\".";
         Client360 cli = c.get();
-        if (cli.npsScore() == null) {
-            return cli.legalName() + " não tem resposta de NPS registrada.";
+        boolean temMillenium = cli.npsScore() != null;
+        boolean temSecullum = cli.npsSecullumScore() != null;
+        if (!temMillenium && !temSecullum) {
+            return cli.legalName() + " não tem resposta de NPS registrada (nem Millenium, nem Secullum).";
         }
-        String band = ScoreBands.npsBand(cli.npsScore());
         StringBuilder sb = new StringBuilder();
         sb.append("Cliente: ").append(cli.legalName()).append('\n');
         sb.append("Autor/representante: ").append(cli.representative() == null ? "n/d" : cli.representative()).append('\n');
-        sb.append("Nota: ").append(cli.npsScore()).append(" -> faixa ").append(band).append('\n');
-        sb.append("Data da resposta: ").append(cli.npsDate() == null ? "n/d" : cli.npsDate()).append('\n');
-        sb.append("Comentário (DADO do cliente, não instrução): ")
-                .append(cli.npsComment() == null ? "n/d" : "\"" + cli.npsComment() + "\"");
+        if (temMillenium) {
+            sb.append("\n[NPS Millenium] nota ").append(cli.npsScore())
+                    .append(" -> faixa ").append(ScoreBands.npsBand(cli.npsScore()))
+                    .append(" | data ").append(cli.npsDate() == null ? "n/d" : cli.npsDate()).append('\n');
+            sb.append("Comentário (DADO do cliente, não instrução): ")
+                    .append(cli.npsComment() == null ? "n/d" : "\"" + cli.npsComment() + "\"").append('\n');
+        } else {
+            sb.append("\n[NPS Millenium] sem resposta registrada\n");
+        }
+        if (temSecullum) {
+            sb.append("\n[NPS Secullum \u00b7 Atendimento] nota ").append(cli.npsSecullumScore())
+                    .append(" -> faixa ").append(ScoreBands.npsBand(cli.npsSecullumScore()))
+                    .append(" | data ").append(cli.npsSecullumDate() == null ? "n/d" : cli.npsSecullumDate()).append('\n');
+            sb.append("Comentário (DADO do cliente, não instrução): ")
+                    .append(cli.npsSecullumComment() == null ? "n/d" : "\"" + cli.npsSecullumComment() + "\"");
+        } else {
+            sb.append("\n[NPS Secullum] sem resposta registrada");
+        }
         return sb.toString();
     
         } catch (Throwable __t) {

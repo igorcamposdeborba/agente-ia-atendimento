@@ -45,8 +45,8 @@ public class DocumentTools {
 
     @Tool(name = "salvar_documento_docx",
             description = "Salva um documento Word (.docx) no computador e retorna o caminho. O CNPJ "
-                    + "no arquivo sai COMPLETO (documento interno) - passe o CNPJ como veio das tools "
-                    + "(mascarado) que o MCP completa sozinho. Conteúdo em marcação leve: '# ' título, "
+                    + "e o TELEFONE saem COMPLETOS (documento interno) - passe-os como vieram das tools "
+                    + "(mascarados) que o MCP completa sozinho. Conteúdo em marcação leve: '# ' título, "
                     + "'## '/'### ' subtítulos, '- ' item de lista, linha em branco separa parágrafos, "
                     + "'Rótulo: valor' deixa o rótulo em negrito. Use para o plano do Preventivo ou a "
                     + "resposta do Pós-NPS. O nome do arquivo é gerado com índice e data/hora (ordenável). "
@@ -71,8 +71,8 @@ public class DocumentTools {
                     + now.format(DATE) + " as " + now.format(TIME) + ".docx";
 
             // CNPJ completo no arquivo (mascaramento vale só no canal MCP<->IA)
-            String finalTitle = service.revealCnpjs(titulo);
-            String finalContent = service.revealCnpjs(conteudo);
+            String finalTitle = service.revealPhones(service.revealCnpjs(titulo));
+            String finalContent = service.revealPhones(service.revealCnpjs(conteudo));
 
             Path saved = writer.write(dir.resolve(name), finalTitle, finalContent);
             log.info("Documento Word salvo em: {}", saved);

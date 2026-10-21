@@ -36,7 +36,7 @@ class EntityResolverTest {
                 n1Row("12.345.678/0001-90", "Metalurgica Serra Azul", "Catraca", "1800", null),
                 n1Row("12.345.678/0001-90", "Metalurgica Serra Azul", "CFTV", "2400", null)
         );
-        List<Client360> cs = resolver.resolve(n1, List.of(), List.of(), List.of());
+        List<Client360> cs = resolver.resolve(n1, List.of(), List.of(), List.of(), List.of());
         assertEquals(1, cs.size(), "duas linhas do mesmo CNPJ viram um cliente");
         assertEquals(new BigDecimal("4200"), cs.get(0).totalValue());
         assertEquals(2, cs.get(0).products().size());
@@ -50,7 +50,7 @@ class EntityResolverTest {
                 new MegazapRecord("23.456.789/0001-01", "Boa Vista", LocalDate.now().minusMonths(14)),
                 new MegazapRecord("23.456.789/0001-01", "Boa Vista", LocalDate.now().minusDays(5))
         );
-        Client360 c = resolver.resolve(List.of(base), mz, List.of(), List.of()).get(0);
+        Client360 c = resolver.resolve(List.of(base), mz, List.of(), List.of(), List.of()).get(0);
 
         assertTrue(c.signals().stream().anyMatch(s -> s.source() == SignalSource.MEGAZAP),
                 "atendimento no Megazap vira sinal de engajamento");
@@ -64,17 +64,31 @@ class EntityResolverTest {
         N1Record base = n1Row("67.890.123/0001-45", "Gama Contabilidade LTDA", "Ponto", "1200", null);
         NpsRecord nps = new NpsRecord("", "GAMA CONTABILIDADE", 3, "comentario", LocalDate.now().minusMonths(8));
 
-        Client360 c = resolver.resolve(List.of(base), List.of(), List.of(), List.of(nps)).get(0);
+        Client360 c = resolver.resolve(List.of(base), List.of(), List.of(), List.of(nps), List.of()).get(0);
 
         assertEquals(MatchConfidence.INCERTO, c.confidence());
         assertEquals(3, c.npsScore());
     }
 
     @Test
+    void secullumNpsVaiParaCampoProprioSemSubstituirMillenium() {
+        N1Record base = n1Row("45.678.901/0001-23", "Epsilon Servicos LTDA", "Ponto", "900", null);
+        NpsRecord millenium = new NpsRecord("", "EPSILON SERVICOS", 9, "millenium", LocalDate.now().minusMonths(2));
+        NpsRecord secullum  = new NpsRecord("", "EPSILON SERVICOS", 6, "secullum", LocalDate.now().minusMonths(1));
+
+        Client360 c = resolver.resolve(List.of(base), List.of(), List.of(), List.of(millenium), List.of(secullum)).get(0);
+
+        assertEquals(9, c.npsScore());
+        assertEquals("millenium", c.npsComment());
+        assertEquals(6, c.npsSecullumScore());
+        assertEquals("secullum", c.npsSecullumComment());
+    }
+
+    @Test
     void peopleMatchesByCnpj() {
         N1Record base = n1Row("34.567.890/0001-12", "Delta", "Cancela", "800", null);
         PeopleRecord p = new PeopleRecord("34.567.890/0001-12", "Delta", "Cliente ativo", LocalDate.now().minusMonths(2));
-        Client360 c = resolver.resolve(List.of(base), List.of(), List.of(p), List.of()).get(0);
+        Client360 c = resolver.resolve(List.of(base), List.of(), List.of(p), List.of(), List.of()).get(0);
         assertTrue(RecencyCalculator.lastInteraction(c.signals()).isPresent());
         assertEquals(LocalDate.now().minusMonths(2), RecencyCalculator.lastInteraction(c.signals()).orElseThrow());
     }

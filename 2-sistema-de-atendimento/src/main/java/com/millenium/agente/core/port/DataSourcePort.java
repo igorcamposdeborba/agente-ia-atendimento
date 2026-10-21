@@ -21,6 +21,9 @@ public interface DataSourcePort {
 
     List<NpsRecord> readNps();
 
+    /** NPS da Secullum (coluna Atendimento), em campo SEPARADO do NPS da Millenium. */
+    List<NpsRecord> readNpsSecullum();
+
     /** Recarrega a partir da fonte (ex.: novo export). */
     void reload();
 }

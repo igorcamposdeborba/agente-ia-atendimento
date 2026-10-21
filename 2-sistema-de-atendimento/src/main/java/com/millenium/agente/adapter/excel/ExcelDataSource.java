@@ -53,6 +53,7 @@ public class ExcelDataSource implements DataSourcePort {
     private volatile List<N1Record> n1;
     private volatile List<MegazapRecord> megazap;
     private volatile List<NpsRecord> nps;
+    private volatile List<NpsRecord> npsSecullum;
 
     public ExcelDataSource(MilleniumProperties props) {
         this.props = props;
@@ -62,6 +63,7 @@ public class ExcelDataSource implements DataSourcePort {
     @Override public List<N1Record> readN1()           { consolidate(); return n1; }
     @Override public List<MegazapRecord> readMegazap()  { consolidate(); return megazap; }
     @Override public List<NpsRecord> readNps()          { consolidate(); return nps; }
+    @Override public List<NpsRecord> readNpsSecullum() { consolidate(); return npsSecullum; }
     @Override public List<PeopleRecord> readPeople()    { return List.of(); }  // People fora do field mapping atual
 
     @Override
@@ -135,11 +137,12 @@ public class ExcelDataSource implements DataSourcePort {
                 .map(NpsRow::fromColumns)
                 .filter(n -> n.company() != null && !n.company().isBlank())
                 .forEach(npsRows::add);
-        npsRows.addAll(readSecullumNps(file("nps", "secullum")));
         this.nps = consolidateNps(byCode.values(), npsRows);
+        // NPS da Secullum: lista SEPARADA (vai para campo proprio no Cliente 360); nunca mesclada com a Millenium
+        this.npsSecullum = consolidateNps(byCode.values(), readSecullumNps(file("nps", "secullum")));
 
-        log.info("Consolidado: {} cliente(s), {} linha(s) N1, {} Megazap, {} NPS",
-                byCode.size(), n1.size(), megazap.size(), nps.size());
+        log.info("Consolidado: {} cliente(s), {} linha(s) N1, {} Megazap, {} NPS Millenium, {} NPS Secullum",
+                byCode.size(), n1.size(), megazap.size(), nps.size(), npsSecullum.size());
     
         } catch (RuntimeException __e) {
             log.error("Falha ao consolidar as fontes Excel de {}", props.getFonteDir(), __e);
@@ -307,7 +310,7 @@ public class ExcelDataSource implements DataSourcePort {
             rows.add(new NpsRow(date, company, String.valueOf(score), comment));
         }
         if (!rows.isEmpty()) {
-            log.info("NPS Secullum: {} resposta(s) (Atendimento x2)", rows.size());
+            log.info("NPS Secullum: {} resposta(s) (Atendimento)", rows.size());
         }
         return rows;
     }

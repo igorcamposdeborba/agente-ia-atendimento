@@ -31,7 +31,8 @@ public final class EntityResolver {
     public List<Client360> resolve(List<N1Record> n1,
                                    List<MegazapRecord> megazap,
                                    List<PeopleRecord> people,
-                                   List<NpsRecord> nps) {
+                                   List<NpsRecord> nps,
+                                   List<NpsRecord> npsSecullum) {
 
         // --- indices das fontes auxiliares (por CNPJ) ---
         // Cada registro do Megazap e uma conversa: contamos a data do ultimo atendimento por cliente.
@@ -55,6 +56,14 @@ public final class EntityResolver {
             if (cnpj != null) npsByCnpj.putIfAbsent(cnpj, n);
             if (name != null) npsByName.putIfAbsent(name, n);
         }
+        Map<String, NpsRecord> npsSecByCnpj = new LinkedHashMap<>();
+        Map<String, NpsRecord> npsSecByName = new LinkedHashMap<>();
+        for (NpsRecord n : npsSecullum) {
+            String cnpj = Normalizer.cnpj(n.cnpj());
+            String name = Normalizer.legalName(n.legalName());
+            if (cnpj != null) npsSecByCnpj.putIfAbsent(cnpj, n);
+            if (name != null) npsSecByName.putIfAbsent(name, n);
+        }
 
         // --- agrega o N1 por chave (uma linha por produto -> um cliente) ---
         Map<String, List<N1Record>> n1ByKey = new LinkedHashMap<>();
@@ -66,7 +75,7 @@ public final class EntityResolver {
         List<Client360> result = new ArrayList<>();
         for (var entry : n1ByKey.entrySet()) {
             result.add(consolidate(entry.getKey(), entry.getValue(),
-                    megazapMax, peopleByCnpj, npsByCnpj, npsByName));
+                    megazapMax, peopleByCnpj, npsByCnpj, npsByName, npsSecByCnpj, npsSecByName));
         }
         return result;
     }
@@ -75,7 +84,9 @@ public final class EntityResolver {
                                   Map<String, LocalDate> megazapMax,
                                   Map<String, PeopleRecord> peopleByCnpj,
                                   Map<String, NpsRecord> npsByCnpj,
-                                  Map<String, NpsRecord> npsByName) {
+                                  Map<String, NpsRecord> npsByName,
+                                  Map<String, NpsRecord> npsSecByCnpj,
+                                  Map<String, NpsRecord> npsSecByName) {
 
         N1Record base = rows.get(0);
         BigDecimal totalValue = BigDecimal.ZERO;
@@ -135,6 +146,28 @@ public final class EntityResolver {
             matchedSources.add("NPS por " + npsKey);
         }
 
+        Integer npsSecScore = null;
+        String npsSecComment = null;
+        LocalDate npsSecDate = null;
+        NpsRecord ns = npsSecByCnpj.get(cnpj);
+        String npsSecKey = "CNPJ";
+        if (ns == null) {
+            String name = Normalizer.legalName(base.legalName());
+            if (name != null) {
+                ns = npsSecByName.get(name);
+                if (ns != null) { npsSecKey = "nome (fantasia/razão)"; uncertain = true; }
+            }
+        }
+        if (ns != null) {
+            npsSecScore = ns.score();
+            npsSecComment = ns.comment();
+            npsSecDate = ns.date();
+            if (ns.date() != null) {
+                addSignal(signals, SignalSource.NPS, ns.date(), "resposta de NPS Secullum (" + ns.band() + ")");
+            }
+            matchedSources.add("NPS Secullum por " + npsSecKey);
+        }
+
         return new Client360(
                 cnpj,
                 base.legalName(),
@@ -149,6 +182,9 @@ public final class EntityResolver {
                 npsScore,
                 npsComment,
                 npsDate,
+                npsSecScore,
+                npsSecComment,
+                npsSecDate,
                 uncertain ? MatchConfidence.INCERTO : MatchConfidence.EXATO,
                 matchedSources
         );

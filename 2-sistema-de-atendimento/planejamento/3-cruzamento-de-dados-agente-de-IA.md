@@ -4,7 +4,7 @@
 Código: https://github.com/igorcamposdeborba/agente-ia-atendimento
 
 > Documento-irmão do **1‑design‑document** (tecnologia) e do **2‑business** (negócio). Aqui está
-> o **como os dados de cinco planilhas viram uma visão única por cliente (Cliente 360)** — a base
+> o **como os dados de sete planilhas (N1 em quatro exports, Megazap e duas pesquisas de NPS) viram uma visão única por cliente (Cliente 360)** — a base
 > sobre a qual os gatilhos (inatividade / preventiva), o RFM e os dois agentes trabalham.
 > A fonte de verdade deste documento é o **field mapping** (`0- Field mapping excel millenium.xlsx`)
 > cruzado com os **exports reais** em `fonte/` e com a implementação do MCP em Java.
@@ -28,10 +28,10 @@ núcleo de regras** consome API/MySQL (Cliente 360 materializado). A interface d
 
 ---
 
-## 2. As cinco fontes (o que o field mapping declara)
+## 2. As fontes (o que o field mapping declara)
 
 Cada planilha recebe uma **categoria de fonte** e uma **prioridade de fonte** (1 = mais confiável
-para resolver conflito de valor entre fontes). O **N1 é a espinha dorsal** e aparece em **três
+para resolver conflito de valor entre fontes). O **N1 é a espinha dorsal** e aparece em **quatro
 exports distintos**.
 
 | # | Arquivo (`fonte/`)                                  | CategoriaDaFonte       | PrioridadeFonte  | Papel no cruzamento                                                                                                                                               | Granularidade                |
@@ -41,6 +41,8 @@ exports distintos**.
 | 3 | PLANILHA N1 EX 1 – SISTEMA CONTRATADO POR CLIENTE   | `PRODUTO`              |      **3**       | Contratos vigentes: serviço/plano, **início e fim de vigência**, telefone principal                                                                               | 1 linha por contrato‑serviço |
 | 4 | PLANILHA MEGAZAP EXEMPLO                            | `WHATSAPP`             |      **4**       | **Auxiliar**: **registro de atendimento/conversa** (data de abertura), problema relatado, CNPJ quando houver — cada linha **conta como conversa** para a recência | 1 linha por atendimento      |
 | 5 | NPS MILLENIUM EX                                    | `NPS`                  |      **5**       | Avaliação: nota (0–10), comentário, **carimbo de data/hora** (engajamento)                                                                                        | 1 linha por resposta         |
+| 6 | PLANILHA N1 EX 5 – CONSULTA DE ORDEM DE SERVIÇO | `ORDEM_SERVICO` | **6** | **Visita/OS** (4º export do N1): datas de **abertura/fechamento** por cliente → proxy da **última visita** (Gatilho B); casa pelo **código** (prefixo em `Pessoa`); **não** entra na recência (Gatilho A) | 1 linha por OS |
+| 7 | NPS SECULLUM EX | `NPS` | **7** | Avaliação da Secullum: **Atendimento (0–5) ×2 → 0–10**, comentário, data; planilha em **CSV numa única célula**. **Campo próprio**, separado do NPS Millenium (um não sobrescreve o outro) | 1 linha por resposta |
 
 > **People CRM** aparece nos planos de negócio/tecnologia como fonte auxiliar, mas **não está no
 > field mapping atual nem na pasta `fonte/`** (existe só na `prova-de-conceito/`). Tratamos People
@@ -66,7 +68,11 @@ três **categorias de item** que também definem a ordem de exibição na ficha/
 | 9  | **Produto**             |      PRODUTO       | —                | `Descrição`         | `Servico`           | —                   | —                         |
 | 10 | **NPSRecomendacao**     |     AVALIAÇÃO      | —                | —                   | —                   | —                   | **Coluna D** (nota 0–10)  |
 | 11 | **NPSExplicacao**       |     AVALIAÇÃO      | —                | —                   | —                   | —                   | **Coluna E** (comentário) |
+| **ÚltimaVisita (proxy)** | N1‑Ordem de Serviço | Data mais recente entre **Abertura** e **Fechamento** das OS do cliente (casa pelo código do prefixo em `Pessoa`). Alimenta o **Gatilho B**; **não** entra na recência (Gatilho A). |
+| **NPSRecomendacao (Secullum)** | NPS Secullum | Planilha em **CSV numa única célula**: nota = coluna **Atendimento** (0–5) **×2** → 0–10; empresa = `Cliente`, data = `Data`, comentário = `Observação`. Vai para **campo próprio** (`npsSecullum`), separado do NPS Millenium — um não sobrescreve o outro (dentro de cada pesquisa, vence a resposta mais recente). |
 | 12 | **MegazapProblema**     |     AVALIAÇÃO      | —                | —                   | —                   | `PROBLEMA`          | —                         |
+
+> A **Ordem de Serviço** e o **NPS Secullum** entram **fora deste dicionário de 12 campos** (que cobre as cinco planilhas originais): a Ordem de Serviço fornece **abertura/fechamento** para a última visita (§6) e o NPS Secullum traz a nota **Atendimento 0–5 ×2 → 0–10** (§3.1).
 
 Três leituras importantes desse dicionário:
 
@@ -115,13 +121,14 @@ certeza**, e cada Cruzamento carrega uma **marca de confiança**.
         (—) nada casa  ─────────►  cliente fica só na fonte de origem
 ```
 
-**Junção interna do N1 (as três planilhas N1) — é o código do N1 que amarra:** as três planilhas do
+**Junção interna do N1 (as quatro planilhas N1) — é o código do N1 que amarra:** as quatro planilhas do
 N1 são cruzadas **pelo código interno do cliente**, e não pelo CNPJ. Onde ele está em cada arquivo:
 
 - **N1‑Contatos** — o código está na **coluna `Cod`** (ex.: `11111`). É a identidade‑mestre, indexada
   por esse código.
 - **N1‑Sistema** — o código vem **embutido no prefixo da coluna `Cliente`** (`11111- PADARIA SILVA`).
 - **N1‑NF** — idem, **embutido no prefixo da coluna `Pessoa`** (`11111- PADARIA SILVA`).
+- **N1‑Ordem de Serviço** — idem, prefixo `11111- ` na coluna `Pessoa`; fornece **abertura/fechamento** (última visita → Gatilho B).
 
 Pelo field mapping, a `RazaoSocial` guarda só o texto — o número é **removido** (regra §3.1) e o
 mesmo número é **extraído** para casar (`Normalizador.codigoCliente`, regex `^\s*(\d+)\s*-`, tolerando
@@ -138,7 +145,7 @@ Há **duas chaves diferentes**, em momentos diferentes do fluxo:
 
 | Etapa do fluxo                                                                                | Chave usada                                                                      | Onde no código                                                                    |
 |-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| **Ingestão** quando entra no backend: amarra as 3 planilhas do N1 (Contatos ↔ Sistema ↔ NF)   | **Código interno do N1** (coluna `Cod`; prefixo `11111- ` em `Cliente`/`Pessoa`) | `ExcelFonteDados` (índice `porCodigo`) + `Normalizador.codigoCliente()`           |
+| **Ingestão** quando entra no backend: amarra as 4 planilhas do N1 (Contatos ↔ Sistema ↔ NF ↔ Ordem de Serviço)   | **Código interno do N1** (coluna `Cod`; prefixo `11111- ` em `Cliente`/`Pessoa`) | `ExcelFonteDados` (índice `porCodigo`) + `Normalizador.codigoCliente()`           |
 | **Identidade** do cliente consolidado (chave de agregação), na etapa de transformação do dado | **CNPJ** quando existe; **código como reserva** se não houver CNPJ               | `Cliente.chave() = cnpj != null ? cnpj : codigo`; `EntityResolver` agrega por ela |
 | Cruzar **Megazap** ao cliente                                                                 | CNPJ, telefone ou domínio de e‑mail                                              | `ExcelFonteDados` (consolidação do Megazap)                                       |
 | Cruzar **NPS** ao cliente                                                                     | tokens de **nome/fantasia** (EXATO/INCERTO)                                      | `ExcelFonteDados` + `Normalizador.tokens/tokensDistintivos`                       |
@@ -193,8 +200,8 @@ notas fiscais** do cliente — o backend acumula o `Valor Total NF` de cada NF n
 **Lacuna da Fase 1 (dedução de última visita ou preventiva vencida com base na existência de registros auxiliares):**
 
 - **Não há coluna de “visita” nem de “preventiva”.** A **última visita** e a **preventiva vencida
-  (Gatilho B)** são **proxies** derivados das datas disponíveis (data da última NF / vigência), não
-  de um log de visitas real. Parâmetro atual: preventiva vencida = sem sinal há **≥ 12 meses**
+  (Gatilho B)** são **proxies** derivados das datas disponíveis — **última NF, vigência de contrato e a Ordem de Serviço (abertura/fechamento)**; no código `últimaVisita = max(últimaNF, movimento de contrato, ordem de serviço)` —, não
+  de um log de visitas real. Parâmetro atual: preventiva vencida = sem visita há **≥ 4 meses**
   (`preventiva-janela-meses`).
 
 ---
@@ -215,7 +222,7 @@ casamento do NPS é por **tokens do nome**: se **todos** os tokens da `Empresa` 
 `Nome` **ou** na `Fantasia` do cliente → **EXATO**; se só **parte** bate → **INCERTO** (conferência
 humana); se nenhum token **distintivo** bate → **não entra**. (No código, o resultado do NPS é só
 `EXATO` **ou** `INCERTO` — não há um nível “provável” intermediário para esta fonte.) Sobre as **10
-respostas de NPS de exemplo** (atuais em `fonte/nps.xlsx`):
+respostas de NPS de exemplo** (amostra do NPS Millenium):
 
 | NPS `Empresa`               | N1 `Nome`                           | N1 `Fantasia`               | Resultado                                          |
 |-----------------------------|-------------------------------------|-----------------------------|----------------------------------------------------|
@@ -235,6 +242,8 @@ respostas de NPS de exemplo** (atuais em `fonte/nps.xlsx`):
 **match incerto ou sem token distintivo vai para conferência humana** e **nunca** para abordagem
 automática. Os dois incertos (Alves/Luciana e Vasconcelos) são os únicos clientes que saem com
 confiança **INCERTO** na ficha; os demais saem **EXATO**.
+
+**Além da Millenium, há o NPS da Secullum** (Atendimento 0–5 ×2 → 0–10; planilha em CSV numa célula). Cada pesquisa vai para o **seu próprio campo** (Millenium e Secullum, lado a lado — um não sobrescreve o outro; ver §3.1 e §9); a amostra acima é a da Millenium.
 
 **c) Megazap muitas vezes não casa e frequentemente é chamado interno.** No exemplo, o chamado é da
 própria “MTEC SOLUÇÕES”, com telefone que não bate com nenhum cliente do N1 — logo o Megazap
@@ -259,7 +268,7 @@ Antes de qualquer Cruzamento, cada chave passa por normalização determinístic
   → `teste`); em **CADASTRO_ORGANIZACAO** e **PRODUTO** a célula é uma **lista separada por `;`** —
   processar cada e‑mail. Minúsculas.
 - **Telefone:** só dígitos; tratar múltiplos números na mesma célula (`51999999995;51999999955`) e
-  variações com/sem DDI.
+  variações com/sem DDI. **Mascarado por padrão no canal MCP↔IA (só os 4 últimos dígitos); o `.docx`/`.xlsx` interno recebem o número completo** (troca mascarado→completo na gravação, igual ao CNPJ).
 - **CNPJ/CPF:** só dígitos para comparação; **mascarado por padrão** na saída (revelado só sob
   demanda). O documento `.docx` interno pode gravar o CNPJ completo.
 - **Datas:** ISO. Para **NF, Megazap e NPS** (vários registros por cliente), o valor é a **data do
@@ -276,12 +285,12 @@ O cruzamento produz, por cliente, o objeto consolidado que as tools do MCP entre
 
 | Grupo                    | Campos consolidados                                                                                | Origem          |
 |--------------------------|----------------------------------------------------------------------------------------------------|-----------------|
-| **Identidade**           | razão social, nome fantasia, CNPJ (mascarado), representante, telefone, e‑mail                     | N1‑Contatos (1) |
+| **Identidade**           | razão social, nome fantasia, CNPJ (mascarado), representante, telefone (mascarado no canal da IA; completo no arquivo), e‑mail | N1‑Contatos (1) |
 | **Contrato/produto**     | produtos, status (ativo/encerrado), início/fim de vigência                                         | N1‑Sistema (3)  |
 | **Valor**                | soma de todas as NF = valor do contrato (`ValorTotalNF`)                                           | N1‑NF (2)       |
 | **Recência**             | última interação/conversa (máx. dos sinais — inclui atendimento no Megazap), última visita (proxy) | derivada (§6)   |
 | **Antiguidade**          | meses de casa (1º contrato/compra)                                                                 | N1‑Sistema/NF   |
-| **Avaliação**            | nota NPS, faixa, comentário, data                                                                  | NPS (5)         |
+| **Avaliação**            | nota NPS, faixa, comentário, data — **Millenium e Secullum em campos separados** (lado a lado, um não sobrescreve o outro) | NPS (Mill.+Sec.) |
 | **Atendimento/conversa** | último problema relatado; data do último atendimento (conversa)                                    | Megazap (4)     |
 | **RFM**                  | recência · antiguidade · valor (soma das NF) · score                                               | núcleo          |
 | **Gatilhos**             | inatividade (A) / preventiva (B) / ambos                                                           | núcleo          |
@@ -304,12 +313,12 @@ Valores atuais no MCP (calibráveis pelo comercial — `wiki/parametros.md`):
 
 | Parâmetro                                  | Valor atual  | Papel             |
 |--------------------------------------------|:------------:|-------------------|
-| Antiguidade mínima (“cliente antigo”)      | **24 meses** | Recorta Gatilho A |
-| Sem engajamento (“sem contato recente”)    | **8 meses**  | Dispara Gatilho A |
-| Janela de preventiva (proxy última visita) | **12 meses** | Dispara Gatilho B |
+| Antiguidade mínima (“cliente antigo”)      | **13 meses** | Recorta Gatilho A |
+| Sem engajamento (“sem contato recente”)    | **4 meses**  | Dispara Gatilho A |
+| Janela de preventiva (proxy última visita) | **4 meses**  | Dispara Gatilho B |
 | Peso recência (RFM)                        |   **0,4**    | Prioridade        |
-| Peso antiguidade (RFM)                     |   **0,3**    | Prioridade        |
-| Peso valor / monetização (RFM)             |   **0,3**    | Prioridade        |
+| Peso antiguidade (RFM)                     |   **0,2**    | Prioridade        |
+| Peso valor / monetização (RFM)             |   **0,4**    | Prioridade        |
 
 ---
 

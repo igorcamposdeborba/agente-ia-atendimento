@@ -23,6 +23,9 @@ public record Client360(
         Integer npsScore,
         String npsComment,
         LocalDate npsDate,
+        Integer npsSecullumScore,
+        String npsSecullumComment,
+        LocalDate npsSecullumDate,
         MatchConfidence confidence,
         List<String> matchedSources
 ) {
@@ -30,5 +33,26 @@ public record Client360(
     public String maskedCnpj() {
         if (cnpj == null || cnpj.length() < 6) return "***";
         return cnpj.substring(0, 2) + ".***.***-" + cnpj.substring(cnpj.length() - 2);
+    }
+
+    /** Telefone mascarado por padrao (minimizacao): mostra so os 4 ultimos digitos. */
+    public String maskedPhone() { return maskPhone(phone); }
+
+    /** Mascara um telefone mantendo apenas os 4 ultimos digitos (preserva separadores). */
+    public static String maskPhone(String phone) {
+        if (phone == null || phone.isBlank()) return phone;
+        long digits = phone.chars().filter(Character::isDigit).count();
+        if (digits <= 4) return phone;
+        StringBuilder sb = new StringBuilder();
+        long seen = 0;
+        for (char ch : phone.toCharArray()) {
+            if (Character.isDigit(ch)) {
+                seen++;
+                sb.append(seen > digits - 4 ? ch : '*');
+            } else {
+                sb.append(ch);
+            }
+        }
+        return sb.toString();
     }
 }

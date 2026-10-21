@@ -33,6 +33,7 @@ class ClientServiceTest {
             public List<MegazapRecord> readMegazap() { return mz; }
             public List<PeopleRecord> readPeople() { return List.of(); }
             public List<NpsRecord> readNps() { return List.of(); }
+            public List<NpsRecord> readNpsSecullum() { return List.of(); }
             public void reload() { }
         };
         MilleniumProperties props = new MilleniumProperties();

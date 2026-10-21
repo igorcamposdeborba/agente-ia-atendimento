@@ -50,7 +50,7 @@ public class ClientService {
         if (local == null) {
             synchronized (this) {
                 if (cache == null) {
-                    cache = resolver.resolve(source.readN1(), source.readMegazap(), source.readPeople(), source.readNps());
+                    cache = resolver.resolve(source.readN1(), source.readMegazap(), source.readPeople(), source.readNps(), source.readNpsSecullum());
                 }
                 local = cache;
             }
@@ -103,6 +103,18 @@ public class ClientService {
         for (Client360 c : clients()) {
             if (c.cnpj() != null) {
                 r = r.replace(c.maskedCnpj(), formatCnpj(c.cnpj()));
+            }
+        }
+        return r;
+    }
+
+    /** Troca o telefone mascarado pelo completo (documento interno: .docx/.xlsx mostram sem mascara). */
+    public String revealPhones(String text) {
+        if (text == null) return null;
+        String r = text;
+        for (Client360 c : clients()) {
+            if (c.phone() != null && !c.phone().isBlank()) {
+                r = r.replace(c.maskedPhone(), c.phone());
             }
         }
         return r;
@@ -227,6 +239,10 @@ public class ClientService {
         if (!c.products().isEmpty()) ev.add("produtos: " + String.join(", ", c.products()));
         if (c.npsScore() != null) {
             ev.add("NPS nota " + c.npsScore() + (c.npsComment() != null ? " - \"" + c.npsComment() + "\"" : ""));
+        }
+        if (c.npsSecullumScore() != null) {
+            ev.add("NPS Secullum (Atendimento) nota " + c.npsSecullumScore()
+                    + (c.npsSecullumComment() != null ? " - \"" + c.npsSecullumComment() + "\"" : ""));
         }
         ev.addAll(c.matchedSources());
         return ev;
