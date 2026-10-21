@@ -2,6 +2,9 @@
 
 > Escutar para dar a resposta **definitiva**, não a imediata. Demonstrar interesse,
 > disponibilidade, presença e acolhimento.
+>
+> *Ouvir é receber a informação; escutar é buscar compreender o que existe por trás dela.* —
+> inspirado em Rogers e Farson (1957).
 
 ## Por que isso importa na Millenium
 
@@ -32,9 +35,28 @@ entregar a solução que **realmente resolve**.
 4. **Explicar** o que será feito e **por quê**.
 5. **Validar a solução**: confirmar se o que foi apresentado atende à expectativa e resolve o desafio.
 
+## Escuta Ativa NÃO é / É
+
+**NÃO é:**
+- Interromper e completar as frases do outro; presumir.
+- Concordar plenamente com tudo.
+- Sentir constrangimento por não compreender determinado ponto (e por isso não perguntar).
+- Presumir que a solução atende a todos os aspectos trazidos pelo cliente.
+- Aceitar ofensas e desrespeitos em nome da satisfação do outro.
+- Atender com pressa, às custas da compreensão.
+
+**É:**
+- Escutar atentamente tudo o que o outro tem a dizer; perguntar.
+- Pontuar inconsistências **após** a fala do outro.
+- Recapitular e confirmar o que foi interpretado; validar com o cliente se ele se sentiu atendido.
+- Conduzir a conversa com respeito e sinalizar comportamentos incompatíveis.
+- Atender com **eficácia** (a resposta definitiva), não só com agilidade.
+
 ## Como o agente aplica
 
 - No copiloto de conversa, gera **perguntas de descoberta** (ver `perguntas-descoberta.md`) em vez de pular para a solução.
 - Sempre oferece uma frase de **recapitulação** para o atendente validar com o cliente.
 - Antes de sugerir uma tratativa, checa se há **informação faltando** e sinaliza o que ainda precisa ser perguntado.
 - Nunca propõe "fazer X" sem que o problema Y esteja claro — se estiver ambíguo, pede confirmação primeiro.
+
+**Referência:** Rogers e Farson (1957), *Active listening*.

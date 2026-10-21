@@ -14,8 +14,9 @@ millenium-agentes/            ← pasta principal (o AGENTE fica aqui)
 ├── instrucao-guardrails.md   ← instrução do Projeto (guardrails; NÃO é skill)
 ├── wiki/                     ← CONHECIMENTO (consultado via consultar_wiki)
 │   ├── principios/
-│   │   ├── empatia.md
+│   │   ├── autogerenciamento-emocional.md
 │   │   ├── escuta-ativa.md
+│   │   ├── empatia.md
 │   │   └── comunicacao-nao-violenta.md
 │   ├── tom.md
 │   ├── tratativas.md

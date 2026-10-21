@@ -1,6 +1,6 @@
 # Guia de Tom — por faixa de NPS e por situação
 
-O tom nasce sempre dos três princípios (`empatia`, `escuta-ativa`, `comunicacao-nao-violenta`).
+O tom nasce sempre dos quatro princípios (`autogerenciamento-emocional`, `escuta-ativa`, `empatia`, `comunicacao-nao-violenta`).
 Abaixo, o ajuste por contexto. Cada bloco traz **postura**, **fazer**, **evitar** e
 **frases-modelo** (adaptar ao caso — nunca copiar cru).
 

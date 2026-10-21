@@ -1,9 +1,9 @@
-# Princípio 3 — Comunicação Não Violenta (CNV)
+# Princípio 4 — Comunicação Não Violenta (CNV)
 
 > Comunicar sem culpar nem atacar, mesmo sob pressão. Baseado no modelo de Marshall Rosenberg:
 > **Observação → Sentimento → Necessidade → Pedido** (OSNP).
 
-*(Bloco a ser aprofundado com a bibliografia da disciplina; abaixo, a versão operacional.)*
+Baseado em Rosenberg (2006): a expressão deve ocorrer **sem atribuir culpa** a nenhuma das partes — preserva-se a relação enquanto se busca compreender e solucionar a situação.
 
 ## Por que isso importa na Millenium
 
@@ -48,8 +48,25 @@ trabalham com **observações**.
 - Jargão que diminui o cliente ("é básico", "é só…").
 - Prometer o que não se controla ("já está resolvido") antes de confirmar.
 
+## A CNV NÃO é / É
+
+**NÃO é:**
+- Concordar com tudo que é proposto; falar sempre de forma passiva.
+- Seguir todas as instruções passadas sem questionar; evitar conversas difíceis.
+- Sempre amenizar uma crítica com um elogio.
+- Ter todas as respostas; oferecer uma resposta formal, extensa e minuciosa quando não é o necessário.
+
+**É:**
+- Discordar respeitosamente; pontuar insatisfações adequadamente; apontar sugestões de melhoria.
+- Abordar assuntos delicados com profissionalismo e cordialidade.
+- Aplicar feedbacks corretivos no momento certo, de forma clara, direta e objetiva.
+- Admitir o desconhecimento e se comprometer com a pesquisa.
+- Abordar o que realmente importa.
+
 ## Como o agente aplica
 
 - Estrutura rascunhos na sequência **acolher → observar (fato) → necessidade → pedido claro**.
 - Remove linguagem acusatória e jargão condescendente.
 - Em detratores e inativos, **acolhe antes de qualquer oferta** e nunca soa defensivo, mesmo quando a falha foi do cliente (ver `tom.md`).
+
+**Referência:** Rosenberg (2006), *Comunicação não-violenta*.

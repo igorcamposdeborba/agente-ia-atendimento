@@ -42,7 +42,7 @@ exports distintos**.
 | 4 | PLANILHA MEGAZAP EXEMPLO                            | `WHATSAPP`             |      **4**       | **Auxiliar**: **registro de atendimento/conversa** (data de abertura), problema relatado, CNPJ quando houver — cada linha **conta como conversa** para a recência | 1 linha por atendimento      |
 | 5 | NPS MILLENIUM EX                                    | `NPS`                  |      **5**       | Avaliação: nota (0–10), comentário, **carimbo de data/hora** (engajamento)                                                                                        | 1 linha por resposta         |
 | 6 | PLANILHA N1 EX 5 – CONSULTA DE ORDEM DE SERVIÇO | `ORDEM_SERVICO` | **6** | **Visita/OS** (4º export do N1): datas de **abertura/fechamento** por cliente → proxy da **última visita** (Gatilho B); casa pelo **código** (prefixo em `Pessoa`); **não** entra na recência (Gatilho A) | 1 linha por OS |
-| 7 | NPS SECULLUM EX | `NPS` | **7** | Avaliação da Secullum: **Atendimento (0–5) ×2 → 0–10**, comentário, data; planilha em **CSV numa única célula**. **Campo próprio**, separado do NPS Millenium (um não sobrescreve o outro) | 1 linha por resposta |
+| 7 | NPS SECULLUM EX | `NPS` | **7** | Avaliação da Secullum: **Atendimento (0–5) ×2 → 0–10**, comentário, data; planilha em **CSV numa única célula**. Traz **Documento (CNPJ)** → **cruza por CNPJ ou nome**. **Campo próprio**, separado do NPS Millenium (um não sobrescreve o outro) | 1 linha por resposta |
 
 > **People CRM** aparece nos planos de negócio/tecnologia como fonte auxiliar, mas **não está no
 > field mapping atual nem na pasta `fonte/`** (existe só na `prova-de-conceito/`). Tratamos People
@@ -69,7 +69,7 @@ três **categorias de item** que também definem a ordem de exibição na ficha/
 | 10 | **NPSRecomendacao**     |     AVALIAÇÃO      | —                | —                   | —                   | —                   | **Coluna D** (nota 0–10)  |
 | 11 | **NPSExplicacao**       |     AVALIAÇÃO      | —                | —                   | —                   | —                   | **Coluna E** (comentário) |
 | **ÚltimaVisita (proxy)** | N1‑Ordem de Serviço | Data mais recente entre **Abertura** e **Fechamento** das OS do cliente (casa pelo código do prefixo em `Pessoa`). Alimenta o **Gatilho B**; **não** entra na recência (Gatilho A). |
-| **NPSRecomendacao (Secullum)** | NPS Secullum | Planilha em **CSV numa única célula**: nota = coluna **Atendimento** (0–5) **×2** → 0–10; empresa = `Cliente`, data = `Data`, comentário = `Observação`. Vai para **campo próprio** (`npsSecullum`), separado do NPS Millenium — um não sobrescreve o outro (dentro de cada pesquisa, vence a resposta mais recente). |
+| **NPSRecomendacao (Secullum)** | NPS Secullum | Planilha em **CSV numa única célula**: nota = coluna **Atendimento** (0–5) **×2** → 0–10; empresa = `Cliente`, data = `Data`, comentário = `Observação`. **Cruza por Documento (CNPJ) quando bate; senão por `Cliente` (nome).** Vai para **campo próprio** (`npsSecullum`), separado do NPS Millenium — um não sobrescreve o outro (dentro de cada pesquisa, vence a resposta mais recente). |
 | 12 | **MegazapProblema**     |     AVALIAÇÃO      | —                | —                   | —                   | `PROBLEMA`          | —                         |
 
 > A **Ordem de Serviço** e o **NPS Secullum** entram **fora deste dicionário de 12 campos** (que cobre as cinco planilhas originais): a Ordem de Serviço fornece **abertura/fechamento** para a última visita (§6) e o NPS Secullum traz a nota **Atendimento 0–5 ×2 → 0–10** (§3.1).
@@ -148,7 +148,8 @@ Há **duas chaves diferentes**, em momentos diferentes do fluxo:
 | **Ingestão** quando entra no backend: amarra as 4 planilhas do N1 (Contatos ↔ Sistema ↔ NF ↔ Ordem de Serviço)   | **Código interno do N1** (coluna `Cod`; prefixo `11111- ` em `Cliente`/`Pessoa`) | `ExcelFonteDados` (índice `porCodigo`) + `Normalizador.codigoCliente()`           |
 | **Identidade** do cliente consolidado (chave de agregação), na etapa de transformação do dado | **CNPJ** quando existe; **código como reserva** se não houver CNPJ               | `Cliente.chave() = cnpj != null ? cnpj : codigo`; `EntityResolver` agrega por ela |
 | Cruzar **Megazap** ao cliente                                                                 | CNPJ, telefone ou domínio de e‑mail                                              | `ExcelFonteDados` (consolidação do Megazap)                                       |
-| Cruzar **NPS** ao cliente                                                                     | tokens de **nome/fantasia** (EXATO/INCERTO)                                      | `ExcelFonteDados` + `Normalizador.tokens/tokensDistintivos`                       |
+| Cruzar **NPS Millenium** ao cliente                                                           | tokens de **nome/fantasia** (EXATO/INCERTO)                                      | `ExcelFonteDados` + `Normalizador.tokens/tokensDistintivos`                       |
+| Cruzar **NPS Secullum** ao cliente                                                            | **Documento (CNPJ)** quando bate (EXATO); senão tokens de **nome** (EXATO/INCERTO) | `ExcelFonteDados` (`clientByCnpj`) + `Normalizador.cnpj/tokens`                    |
 | **Busca do agente** (`ficha_cliente`, `situacao_nps`, …)                                      | **CNPJ ou razão social** (nunca o código)                                        | `ClienteService.buscar(termo)`                                                    |
 
 **O código do N1 é uma chave interna de ingestão — vale só até montar o cliente
@@ -243,7 +244,7 @@ respostas de NPS de exemplo** (amostra do NPS Millenium):
 automática. Os dois incertos (Alves/Luciana e Vasconcelos) são os únicos clientes que saem com
 confiança **INCERTO** na ficha; os demais saem **EXATO**.
 
-**Além da Millenium, há o NPS da Secullum** (Atendimento 0–5 ×2 → 0–10; planilha em CSV numa célula). Cada pesquisa vai para o **seu próprio campo** (Millenium e Secullum, lado a lado — um não sobrescreve o outro; ver §3.1 e §9); a amostra acima é a da Millenium.
+**Além da Millenium, há o NPS da Secullum** (Atendimento 0–5 ×2 → 0–10; planilha em CSV numa célula), que **cruza por Documento (CNPJ) quando bate, senão por nome**. Cada pesquisa vai para o **seu próprio campo** (Millenium e Secullum, lado a lado — um não sobrescreve o outro; ver §3.1 e §9); a amostra acima é a da Millenium.
 
 **c) Megazap muitas vezes não casa e frequentemente é chamado interno.** No exemplo, o chamado é da
 própria “MTEC SOLUÇÕES”, com telefone que não bate com nenhum cliente do N1 — logo o Megazap

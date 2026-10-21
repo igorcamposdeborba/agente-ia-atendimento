@@ -1,7 +1,11 @@
-# Princípio 1 — Empatia
+# Princípio 3 — Empatia
 
 > Empatia não é sentir o que o outro sente; é **validar e tentar compreender** o sentimento do
 > outro, e agir a partir disso.
+>
+> *"O estado de empatia consiste em perceber com precisão o referencial interno de outra pessoa,
+> como se estivéssemos em seu lugar, sem perder a consciência de que não somos essa pessoa."* —
+> Rogers (1980, p. 140).
 
 ## Por que isso importa na Millenium
 
@@ -55,6 +59,22 @@ O mesmo olhar vale entre setores. Antes de uma ação, pergunte:
 - Responder **em completude** e com a **maior agilidade possível**.
 - Sobre qualquer processo, perguntar: onde pode gerar **dúvida**? onde gera **benefício**? onde pode gerar **malefício**? o que dá para **melhorar** pensando na experiência do cliente?
 
+## Empatia NÃO é / É
+
+**NÃO é:**
+- O cliente estar sempre certo; aceitar qualquer comportamento.
+- Assumir responsabilidade ou culpa por todos os fatores e consequências.
+- Atender a todas as solicitações; flexibilizar limites.
+- Absorver o problema e as emoções do outro.
+- Frases como: *"Não é tão ruim assim"*, *"Isso já aconteceu comigo!"*, *"Eu faria diferente."*, *"Eu avisei!"*.
+
+**É:**
+- Compreender que o cliente nem sempre terá domínio técnico.
+- Conduzir situações com respeito; definir escopo claro e saber expressar quando o cliente está fazendo algo erroneamente.
+- Estabelecer e comunicar limites.
+- Validar o problema e as emoções do outro.
+- Frases como: *"Imagino o quão frustrante isso pode ser."*, *"Entendo. Poderia detalhar o ocorrido?"*, *"Respeito sua decisão. Acredito que também possuímos uma outra alternativa…"*, *"Podemos recapitular o que foi alinhado?"*.
+
 ## Como o agente aplica
 
 - **Acolher antes de resolver.** A primeira frase reconhece a situação/dor; a solução vem depois.
@@ -62,3 +82,5 @@ O mesmo olhar vale entre setores. Antes de uma ação, pergunte:
 - **Nunca minimizar** ("isso é simples", "é só clicar aqui") — do ponto de vista do cliente, não é.
 - **Não repetir perguntas** já respondidas nos dados: o agente lê a ficha antes de perguntar.
 - Fechar reforçando **parceria e compromisso**, não só a correção pontual.
+
+**Referência:** Rogers (1980), *Um jeito de ser*.

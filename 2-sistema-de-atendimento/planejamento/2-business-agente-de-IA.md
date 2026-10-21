@@ -259,7 +259,7 @@ Sequência: **Governança \+ Wiki \+ campos de dados primeiro**; depois o **Agen
 | Risco / decisão                                                         | Encaminhamento                                                                                         |
 |:------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------|
 | O N1 registra e datazona visitas e atualizações cadastrais/contratuais? | **Confirmar na descoberta**; é o que sustenta a recência. Se faltar, aproximar com as datas que houver |
-| Casar bases sem CNPJ (NPS com CNPJ opcional)                            | Padronizar razão social antes do match; priorizar CNPJ quando existir                                  |
+| Casar bases sem CNPJ (NPS Millenium sem CNPJ; Secullum traz Documento/CNPJ) | Padronizar razão social antes do match; priorizar CNPJ quando existir — o **Secullum casa por Documento (CNPJ) ou nome** |
 | Limiares de antiguidade/recência/valor                                  | Decisão do comercial em `wiki/parametros.md`                                                       |
 | Base legal do contato proativo                                          | **Confirmar com a Acta** antes de rodar com dado real (portão)                                         |
 | Baixa resposta de NPS                                                   | NPS conta como sinal de recência quando existe; o **N1 dá a cobertura** do resto                       |
