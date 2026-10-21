@@ -7,9 +7,9 @@ import com.millenium.agente.core.dto.InactiveClient;
 import com.millenium.agente.core.dto.MatchConfidence;
 import com.millenium.agente.core.dto.Rfm;
 import com.millenium.agente.core.dto.EngagementSignal;
-import com.millenium.agente.core.normalizacao.Normalizer;
+import com.millenium.agente.core.normalize.Normalizer;
 import com.millenium.agente.core.port.DataSourcePort;
-import com.millenium.agente.core.recencia.RecencyCalculator;
+import com.millenium.agente.core.recency.RecencyCalculator;
 import com.millenium.agente.core.rfm.RfmCalculator;
 import org.springframework.stereotype.Service;
 
@@ -21,12 +21,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Nucleo de aplicacao: monta o Cliente 360 a partir das fontes, aplica recencia + RFM + os dois
+ * Nucleo de aplicacao: monta o Cliente 360 a partir das fontes, aplica recency + RFM + os dois
  * gatilhos do Preventivo, e serve as consultas das tools do MCP.
  * <p>
  * Gatilho A (inatividade): cliente antigo E sem engajamento recente.
  * Gatilho B (preventiva vencida): sem visita ha >= janela (proxy, pois nao ha coluna de preventiva),
- * independente da recencia.
+ * independente da recency.
  */
 @Service
 public class ClientService {
@@ -66,6 +66,25 @@ public class ClientService {
 
     public int totalClients() {
         return clients().size();
+    }
+
+    /** Limiares ativos do backend (application.properties) em texto para o agente - a FONTE
+     *  DA VERDADE dos numeros, para o agente nao citar valores da wiki nem de memoria. */
+    public String activeParams() {
+        return "Parametros ativos do backend (fonte: application.properties; NAO a wiki):\n"
+                + "- Antigo (\"cliente antigo\"): tempo de casa >= " + props.getAntiguidadeLimiarMeses() + " meses.\n"
+                + "- Sem contato recente (gatilho A / inatividade): >= " + props.getInatividadeLimiarMeses() + " meses sem engajamento do cliente.\n"
+                + "- Preventiva vencida (gatilho B): >= " + props.getPreventivaJanelaMeses() + " meses sem visita (proxy).\n"
+                + "- Pesos RFM: recencia " + props.getPesoRecencia() + " | antiguidade " + props.getPesoAntiguidade() + " | monetizacao " + props.getPesoMonetizacao() + ".\n"
+                + "Use SEMPRE estes valores ao explicar ao atendente; nunca cite numeros da wiki ou de memoria.";
+    }
+
+    /** Cabecalho curto com os limiares ativos para prefixar as filas (o agente sempre ve o numero real). */
+    public String activeParamsHeader() {
+        return "[PARAMETROS ATIVOS DO BACKEND - nao use numeros da wiki] antigo >= "
+                + props.getAntiguidadeLimiarMeses() + " meses de casa | sem contato recente >= "
+                + props.getInatividadeLimiarMeses() + " meses sem engajamento | preventiva vencida >= "
+                + props.getPreventivaJanelaMeses() + " meses sem visita.\n\n";
     }
 
     /** Visao consolidada (Cliente 360) de todos os clientes - usada pela exportacao em .xlsx. */

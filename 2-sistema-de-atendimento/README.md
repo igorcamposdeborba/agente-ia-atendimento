@@ -2,7 +2,7 @@
 
 Servidor **MCP em Java 21** que dá aos agentes de IA (software Claude) a **visão consolidada do cliente (Cliente 360)** e a **wiki de atendimento**. Fase 1 do design: roda **localmente** e é lançado pelo **Claude Desktop via stdio**, lendo **planilhas `.xlsx` mock** (dados fictícios/mascarados).
 
-> Prova de conceito. Os `.xlsx` são fictícios/mascarados — a leitura segue o **field mapping** (5 planilhas: N1 em três exports, Megazap e NPS) e o núcleo de regras não depende do Excel (ver arquitetura hexagonal abaixo).
+> Prova de conceito. Os `.xlsx` são fictícios/mascarados — a leitura segue o **field mapping** (N1 em três exports + Ordem de Serviço, Megazap e **NPS em duas pesquisas — Millenium e Secullum**) e o núcleo de regras não depende do Excel (ver arquitetura hexagonal abaixo).
 
 > **Não precisa de banco de dados.** A máquina do atendente roda a Fase 1 **100% local**, lendo `.xlsx` — **sem MySQL** e sem rede. O único pré-requisito é o **Java 21**. (MySQL/API só entram na Fase 2, futura; a exportação do Cliente 360 para MySQL/planilha é uma ferramenta separada de bastidor, fora da instalação do atendente.)
 
@@ -47,18 +47,18 @@ O restante deste README documenta a arquitetura e o build manual.
 | `clientes_inativos`        | Consulta do **subconjunto do gatilho A** (linhas-resumo). Para o documento, use `preventivo_contatos`.                                                                                                                                                                                                               |
 | `clientes_para_contato`    | Consulta em linhas-resumo: A ou B (`preventivaVencida=true` = só B). Para o documento, use `preventivo_contatos`.                                                                                                                                                                                                    |
 | `historico_relacionamento` | Linha do tempo dos sinais de **engajamento do cliente** (disparos da Millenium não aparecem).                                                                                                                                                                                                                        |
-| `estimar_servico`          | Estimativa de serviço — **não calibrada na Fase 1** (tempos são placeholders em `wiki/parametros.md`).                                                                                                                                                                                                               |
 | `consultar_wiki`           | Busca na wiki (tom, tratativas, princípios, perguntas, parâmetros, governança).                                                                                                                                                                                                                                      |
 | `salvar_documento_docx`    | Salva o plano do Preventivo ou a resposta do Pós-NPS como **Word `.docx`** (via Apache POI, **sem Python**) em `millenium.output-dir`. **CNPJ sai completo** no arquivo (o mascaramento vale só no canal MCP↔IA); nome ordenável com índice + data/hora (ex.: `1- plano de atendimento - 15-08-2026 as 17-54.docx`). |
 | `exportar_cadastro_xlsx`   | Exporta o **cadastro normalizado (Cliente 360)** para **Excel `.xlsx`** em `millenium.output-dir` (uma linha por cliente). Use **só a pedido** do atendente (gatilho *"gerar excel"*), em geral após Preventivo/Pós-NPS. **CNPJ completo** no arquivo (interno). Skill: `agentes/exportar-cadastro`.                     |
 | `recarregar_dados`         | Relê os `.xlsx` após um novo export.                                                                                                                                                                                                                                                                                 |
+| `parametros_ativos`       | Limiares ativos do backend (gerados a partir da fonte única `wiki/parametros.md`): "cliente antigo", "sem contato recente" (A), "preventiva vencida" (B) e pesos do RFM. O agente consulta para explicar critérios com o número real — nunca o da wiki/memória. |
 
 ## Regras de negócio implementadas
 - **Enviar ≠ conversa:** só engajamento do cliente conta na recência — resposta de NPS, movimento no N1 (venda/vigência), e **cada atendimento registrado no Megazap** (o registro do WhatsApp **é uma conversa**; a planilha não traz direção). Um **disparo de marketing/automático** nunca conta.
 - **Recência consolidada** = a data mais recente entre os sinais de engajamento.
-- **Gatilhos do Preventivo:** (A) antigo (≥ 24 meses) sem contato recente (≥ 8 meses); (B) **preventiva vencida** — como os dados reais **não têm coluna de preventiva**, usamos a **última visita** como *proxy* (sem movimento de NF/vigência há ≥ 12 meses ou nunca). Independe da recência.
+- **Gatilhos do Preventivo:** (A) antigo sem contato recente; (B) **preventiva vencida** — como os dados reais **não têm coluna de preventiva**, usamos a **última visita** como *proxy*. Independe da recência. **Os limiares (antigo / sem contato / janela de preventiva) e os pesos do RFM vêm da fonte única `wiki/parametros.md`** (ver "Parâmetros" abaixo), expostos em runtime pela tool `parametros_ativos`.
 - **Valor do contrato = soma de todas as NF** do cliente (`ValorTotalNF`), usado no eixo de valor do RFM (recência + antiguidade + valor).
-- **Cruzamento (field mapping):** o N1 vem em **três exports** amarrados pelo **código do cliente** (`Cod` ↔ prefixo `11111- …`). A cascata de casamento é **CNPJ → telefone → nome fantasia/razão social normalizados**; só *exato/provável* entram na fila automática, *incerto* vai para **conferência humana**. O **NPS não traz CNPJ** e casa por **nome fantasia**; o **e-mail** é reduzido ao **domínio** (após `@`, antes do `.`).
+- **Cruzamento (field mapping):** o N1 vem em **três exports** amarrados pelo **código do cliente** (`Cod` ↔ prefixo `11111- …`). A cascata de casamento é **CNPJ → telefone → nome fantasia/razão social normalizados**; só *exato/provável* entram na fila automática, *incerto* vai para **conferência humana**. O **NPS não traz CNPJ** e casa por **nome fantasia**; o **e-mail** é reduzido ao **domínio** (após `@`, antes do `.`). São **duas pesquisas de NPS**: a da **Millenium** (nota 0–10 direta) e a da **Secullum** (a planilha vem em CSV numa única célula; a nota do NPS = coluna **Atendimento** 0–5 **×2**, fechando o mesmo máximo 10). As duas são mescladas por cliente e **o registro mais recente vence**.
 
 ## Arquitetura (hexagonal — reaproveitável na Fase 2)
 ```
@@ -83,7 +83,7 @@ Pré-requisitos: **JDK 21** e **Maven** (o IntelliJ já traz um).
 
 1. **Abrir no IntelliJ:** File → Open → selecione a pasta `millenium-agente-ia` (o IntelliJ importa o `pom.xml`).
 
-2. **Dados e wiki:** o MCP apenas **lê** as **cinco planilhas** da pasta `fonte/` e a wiki da pasta `wiki/` (Markdown editável). As planilhas do field mapping são localizadas por trecho do nome: `...CONTATOS...` (cadastro), `...SISTEMA CONTRATADO...` (contratos), `...SAÍDAS DE PRODUTOS POR NF...` (notas), `...MEGAZAP...` e `...NPS...`. Os arquivos fictícios e a wiki já vêm no projeto; **não há geração de mock**. Para dados reais, substitua os `.xlsx` em `fonte/` mantendo esses nomes. A wiki (`wiki/`) pode ser editada direto — o MCP a lê da pasta externa configurada (`millenium.wiki-dir`) e, se ela não existir, usa a cópia empacotada no jar.
+2. **Dados e wiki:** o MCP apenas **lê** as planilhas da pasta `fonte/` e a wiki da pasta `wiki/` (Markdown editável). As planilhas do field mapping são localizadas por trecho do nome: `...CONTATOS...` (cadastro), `...SISTEMA CONTRATADO...` (contratos), `...SAÍDAS DE PRODUTOS POR NF...` (notas), `...ORDEM DE SERVIÇO...` (visitas/OS), `...MEGAZAP...`, `...NPS MILLENIUM...` e `...NPS SECULLUM...`. O NPS principal é qualquer `...NPS...` que **não** seja o da Secullum. Os arquivos fictícios e a wiki já vêm no projeto; **não há geração de mock**. Para dados reais, substitua os `.xlsx` em `fonte/` mantendo esses nomes. A wiki (`wiki/`) pode ser editada direto — o MCP a lê da pasta externa configurada (`millenium.wiki-dir`) e, se ela não existir, usa a cópia empacotada no jar.
 
 3. **Rodar os testes:**
    ```bash
@@ -110,11 +110,21 @@ Pré-requisitos: **JDK 21** e **Maven** (o IntelliJ já traz um).
 ## Dados e wiki
 As planilhas (`fonte/`), a wiki (`wiki/`) e as skills/instrução (`agentes/`) são o **conteúdo real** do pacote de trabalho, todas **editáveis** (a wiki é empacotada no jar como fallback). As cinco planilhas fictícias trazem ~10 clientes e cenários úteis para validar o cruzamento: cliente antigo sem engajamento (gatilho A), cliente ativo com preventiva vencida (gatilho B), NPS que casa por **nome fantasia** e um NPS que **não casa com segurança** (vai para conferência humana). A wiki é servida pela tool `consultar_wiki`.
 
-## Ajustes rápidos (`src/main/resources/application.properties`)
-- `millenium.fonte-dir` — pasta das cinco planilhas `.xlsx` do field mapping (padrão `%USERPROFILE%/MilleniumAgenteIA/fonte`).
-- `millenium.wiki-dir` — pasta da wiki editável (padrão `%USERPROFILE%/MilleniumAgenteIA/wiki`); se ausente, usa a wiki do jar.
-- `millenium.antiguidade-limiar-meses` (padrão 24) e `millenium.inatividade-limiar-meses` (padrão 8).
-- `millenium.preventiva-janela-meses` (padrão 12) — proxy do gatilho B pela última visita.
-- `millenium.peso-recencia | peso-antiguidade | peso-monetizacao` — pesos do RFM.
+## Parâmetros (fonte única: `wiki/parametros.md`)
 
-Os limiares comerciais ainda serão confirmados com o time (ver §12 do design).
+Os **limiares** do Preventivo e os **pesos do RFM** têm **um único lugar de edição**: o bloco
+`properties` do **`wiki/parametros.md`**. A partir dele, o `application.properties` é **gerado**
+(região entre `# >>> GERADO ... >>>` e `# <<< FIM GERADO <<<`, marcada "não editar").
+
+Para mudar um limiar:
+1. Edite o número no **`wiki/parametros.md`**.
+2. Rode **`sync-parametros.cmd`** (ou o `install.cmd`, que já chama o sync antes do build).
+3. `mvn clean package` e **reinicie o Claude** (o jar embute o `application.properties`).
+
+> Não edite os limiares direto no `application.properties` — o sync os sobrescreve. Se faltar
+> algum valor, o servidor **falha no startup** com mensagem clara no log (validação em
+> `MilleniumProperties`). Em runtime, a tool `parametros_ativos` devolve esses valores ao agente.
+
+As **pastas** seguem configuráveis à parte no `application.properties` (ou via `--millenium.*` na config do Claude):
+- `millenium.fonte-dir` — pasta das cinco planilhas `.xlsx` (padrão `%USERPROFILE%/MilleniumAgenteIA/fonte`).
+- `millenium.wiki-dir` — pasta da wiki editável (padrão `%USERPROFILE%/MilleniumAgenteIA/wiki`); se ausente, usa a wiki do jar.

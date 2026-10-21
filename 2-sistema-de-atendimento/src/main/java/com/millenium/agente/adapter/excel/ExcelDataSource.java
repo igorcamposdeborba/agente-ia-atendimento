@@ -4,13 +4,14 @@ import com.millenium.agente.adapter.excel.SpreadsheetRows.ContactsRow;
 import com.millenium.agente.adapter.excel.SpreadsheetRows.MegazapRow;
 import com.millenium.agente.adapter.excel.SpreadsheetRows.InvoiceRow;
 import com.millenium.agente.adapter.excel.SpreadsheetRows.NpsRow;
+import com.millenium.agente.adapter.excel.SpreadsheetRows.ServiceOrderRow;
 import com.millenium.agente.adapter.excel.SpreadsheetRows.SystemRow;
 import com.millenium.agente.config.MilleniumProperties;
 import com.millenium.agente.core.dto.MegazapRecord;
 import com.millenium.agente.core.dto.N1Record;
 import com.millenium.agente.core.dto.NpsRecord;
 import com.millenium.agente.core.dto.PeopleRecord;
-import com.millenium.agente.core.normalizacao.Normalizer;
+import com.millenium.agente.core.normalize.Normalizer;
 import com.millenium.agente.core.port.DataSourcePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ import java.util.stream.Stream;
  * por cliente que o nucleo consome ({@link N1Record}/{@link MegazapRecord}/{@link NpsRecord}).
  * <p>
  * Regras do field mapping aplicadas aqui: N1 amarrado pelo codigo (Cod / prefixo "11111- ");
- * valor do contrato = soma de todas as NF; recencia por ultimo registro (NF/Megazap);
+ * valor do contrato = soma de todas as NF; recency por ultimo registro (NF/Megazap);
  * e-mail reduzido ao dominio (chave auxiliar); Megazap = conversa.
  */
 @Component
@@ -72,6 +73,7 @@ public class ExcelDataSource implements DataSourcePort {
 
     // ============================ consolidacao ============================
     private synchronized void consolidate() {
+        try {
         if (n1 != null) return;
         seedSpreadsheets();   // 1a execucao: semeia a pasta de fontes se estiver vazia
 
@@ -94,7 +96,7 @@ public class ExcelDataSource implements DataSourcePort {
             c.contractMovement = mostRecent(c.contractMovement, mostRecent(start, end));
         }
 
-        // 3) notas fiscais (N1-NF): valor do contrato = SOMA das NF; recencia = ultima NF
+        // 3) notas fiscais (N1-NF): valor do contrato = SOMA das NF; recency = ultima NF
         for (InvoiceRow l : excel.byHeader(invoiceFile(), InvoiceRow.class)) {
             ClientAccumulator c = byCode.get(Normalizer.clientCode(l.person()));
             if (c == null) continue;
@@ -103,6 +105,19 @@ public class ExcelDataSource implements DataSourcePort {
             c.lastInvoice = mostRecent(c.lastInvoice, ExcelSpreadsheet.parseDate(l.postingDate()));
         }
 
+        // 3b) ordens de servico (N1-OS): atendimento tecnico = melhor proxy de "ultima visita".
+        //     Conta para recencia (gatilho A) e manutencao/preventiva (gatilho B). Casa pelo codigo em "Pessoa".
+        int osMatched = 0;
+        for (ServiceOrderRow l : excel.byHeader(file("ordem", "servico"), ServiceOrderRow.class)) {
+            ClientAccumulator c = byCode.get(Normalizer.clientCode(l.person()));
+            if (c == null) continue;   // OS sem cliente casado por codigo -> ignorada
+            LocalDate open = ExcelSpreadsheet.parseDate(l.openDate());
+            LocalDate close = ExcelSpreadsheet.parseDate(l.closeDate());
+            c.lastServiceOrder = mostRecent(c.lastServiceOrder, mostRecent(open, close));
+            osMatched++;
+        }
+        log.info("N1-OS: {} ordem(ns) de servico casada(s) por codigo", osMatched);
+
         // 4) N1 consolidado -> registros que o EntityResolver agrega (chave = CNPJ real ou codigo)
         this.n1 = byCode.values().stream().flatMap(this::n1Records).toList();
 
@@ -110,22 +125,31 @@ public class ExcelDataSource implements DataSourcePort {
         this.megazap = consolidateMegazap(byCode.values(),
                 excel.byHeader(file("megazap"), MegazapRow.class));
 
-        // 6) NPS: lido por posicao (A=carimbo, C=empresa, D=nota, E=comentario), pula o cabecalho
-        //    (pergunta longa) e respostas sem empresa; casa por nome fantasia; ultimo registro por cliente
-        List<NpsRow> npsRows = excel.positional(file("nps")).stream()
+        // 6) NPS (duas pesquisas), ambas casadas por nome fantasia; o registro mais RECENTE
+        //    por cliente vence (consolidateNps):
+        //    (a) Millenium - multi-coluna, por POSICAO (A=carimbo, C=empresa, D=nota 0-10, E=comentario);
+        //    (b) Secullum  - CSV numa unica celula; nota = coluna "Atendimento" (0-5) x2 -> 0-10.
+        List<NpsRow> npsRows = new ArrayList<>();
+        excel.positional(npsMainFile()).stream()
                 .skip(1)
                 .map(NpsRow::fromColumns)
                 .filter(n -> n.company() != null && !n.company().isBlank())
-                .toList();
+                .forEach(npsRows::add);
+        npsRows.addAll(readSecullumNps(file("nps", "secullum")));
         this.nps = consolidateNps(byCode.values(), npsRows);
 
         log.info("Consolidado: {} cliente(s), {} linha(s) N1, {} Megazap, {} NPS",
                 byCode.size(), n1.size(), megazap.size(), nps.size());
+    
+        } catch (RuntimeException __e) {
+            log.error("Falha ao consolidar as fontes Excel de {}", props.getFonteDir(), __e);
+            throw __e;
+        }
     }
 
     /** Uma linha N1 por produto; o valor total das NF vai na primeira, 0 nas demais (o Core soma). */
     private Stream<N1Record> n1Records(ClientAccumulator c) {
-        LocalDate visitProxy = mostRecent(c.lastInvoice, c.contractMovement);
+        LocalDate visitProxy = mostRecent(mostRecent(c.lastInvoice, c.contractMovement), c.lastServiceOrder);
         List<String> products = c.products.isEmpty() ? java.util.Collections.singletonList(null) : c.products;
         List<N1Record> rows = new ArrayList<>();
         for (int i = 0; i < products.size(); i++) {
@@ -229,6 +253,65 @@ public class ExcelDataSource implements DataSourcePort {
         return a != null ? a : file("nf");
     }
 
+    /** NPS "principal" (Millenium): qualquer .xlsx com "nps" no nome que NAO seja o da Secullum. */
+    private Path npsMainFile() {
+        Path dir = Path.of(props.getFonteDir());
+        if (!Files.isDirectory(dir)) {
+            return null;
+        }
+        try (java.util.stream.Stream<Path> s = Files.list(dir)) {
+            return s.filter(f -> {
+                        String n = f.getFileName().toString().toLowerCase();
+                        return n.endsWith(".xlsx") && !n.startsWith("~$");
+                    })
+                    .filter(f -> {
+                        String n = ExcelSpreadsheet.norm(f.getFileName().toString());
+                        return n.contains("nps") && !n.contains("secullum");
+                    })
+                    .findFirst().orElse(null);
+        } catch (IOException e) {
+            log.warn("Falha ao localizar o NPS principal em {}: {}", dir, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * NPS da Secullum: a planilha vem como CSV numa UNICA celula por linha
+     * (Cliente,Contato,Documento,Email,Banco,Data,Atendimento,Software,Equipamento,Observacao).
+     * A nota do NPS = coluna "Atendimento" (0-5) x2, para fechar o mesmo maximo 10 do NPS da
+     * Millenium. Casa por nome fantasia (coluna Cliente).
+     */
+    private List<NpsRow> readSecullumNps(Path file) {
+        List<NpsRow> rows = new ArrayList<>();
+        for (String[] cells : excel.positional(file)) {
+            String line = cells.length > 0 && cells[0] != null ? cells[0] : "";
+            if (line.isBlank()) {
+                continue;
+            }
+            String[] c = line.split(",", 10);   // Observacao (ultima) pode conter virgulas
+            if (c.length < 7) {
+                continue;                        // precisa ao menos ate "Atendimento"
+            }
+            String company = c[0].trim();
+            // pula o cabecalho textual ("Cliente")
+            if (company.equalsIgnoreCase("Cliente")) {
+                continue;
+            }
+            Integer atendimento = ExcelSpreadsheet.parseInteger(c[6]);
+            if (company.isBlank() || atendimento == null) {
+                continue;
+            }
+            int score = Math.min(10, atendimento * 2);   // Atendimento 0-5 -> NPS 0-10
+            String date = c[5].trim();
+            String comment = c.length > 9 ? c[9].trim() : "";
+            rows.add(new NpsRow(date, company, String.valueOf(score), comment));
+        }
+        if (!rows.isEmpty()) {
+            log.info("NPS Secullum: {} resposta(s) (Atendimento x2)", rows.size());
+        }
+        return rows;
+    }
+
     /**
      * Se a pasta de fontes ({@code millenium.fonte-dir}, padrao {@code ${user.home}/MilleniumAgenteIA/fonte})
      * estiver vazia, semeia as planilhas ficticias empacotadas no jar ({@code classpath:fonte/*.xlsx}).
@@ -296,7 +379,7 @@ public class ExcelDataSource implements DataSourcePort {
         List<String> emailDomains = List.of();
         final List<String> products = new ArrayList<>();
         BigDecimal totalInvoiceValue = BigDecimal.ZERO;
-        LocalDate firstContract, contractMovement, lastInvoice;
+        LocalDate firstContract, contractMovement, lastInvoice, lastServiceOrder;
 
         static ClientAccumulator from(ContactsRow l) {
             ClientAccumulator c = new ClientAccumulator();

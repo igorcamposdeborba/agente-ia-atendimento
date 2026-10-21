@@ -62,3 +62,4 @@ Cada passo é feito pelo próprio usuário:
 - O texto das **skills** e da **wiki** é Markdown — o atendente/admin edita direto.
 - O passo exato de "subir a skill" no app pode mudar; confirme na tela de Skills da sua versão.
 - Os Excel em `fonte/` são de exemplo (fictícios). Troque pelos exports reais só após a Acta.
+- **Limiares e pesos do RFM: fonte única em `wiki/parametros.md`.** O backend os recebe pelo `application.properties` **gerado** pelo `sync-parametros` (rode antes do build; o `install.cmd` já chama). Edite só o `parametros.md`; em runtime o agente vê os valores pela tool `parametros_ativos`.

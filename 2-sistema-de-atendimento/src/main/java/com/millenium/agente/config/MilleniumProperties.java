@@ -1,5 +1,6 @@
 package com.millenium.agente.config;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -28,21 +29,43 @@ public class MilleniumProperties {
     private String outputDir = System.getProperty("user.home") + "/MilleniumAgenteIA/saidas";
 
     /** A partir de quantos meses de casa o cliente e considerado "antigo". */
-    private int antiguidadeLimiarMeses = 24;
+    private int antiguidadeLimiarMeses;
 
     /** A partir de quantos meses sem engajamento o cliente e considerado "sem contato recente" (parametros.md: 8-12). */
-    private int inatividadeLimiarMeses = 8;
+    private int inatividadeLimiarMeses;
 
     /**
      * Gatilho B (preventiva vencida). Nao ha coluna de "proxima preventiva" nos dados reais, entao
      * usamos a "ultima visita" como PROXY: preventiva vencida = sem visita ha >= este numero de meses
      * (ou nunca). A calibrar por produto (ver wiki/parametros.md, coluna "Janela preventiva").
      */
-    private int preventivaJanelaMeses = 12;
+    private int preventivaJanelaMeses;
 
-    private double pesoRecencia = 0.4;
-    private double pesoAntiguidade = 0.3;
-    private double pesoMonetizacao = 0.3;
+    private double pesoRecencia;
+    private double pesoAntiguidade;
+    private double pesoMonetizacao;
+
+    /**
+     * Os limiares/pesos NAO tem default no codigo: a fonte unica da verdade e o
+     * application.properties (ou --millenium.* / variavel de ambiente). Se faltar algum,
+     * o servidor falha AQUI no startup (erro no log) em vez de rodar com numero silencioso.
+     */
+    @PostConstruct
+    void validarParametros() {
+        var faltando = new java.util.ArrayList<String>();
+        if (antiguidadeLimiarMeses <= 0) faltando.add("millenium.antiguidade-limiar-meses");
+        if (inatividadeLimiarMeses <= 0) faltando.add("millenium.inatividade-limiar-meses");
+        if (preventivaJanelaMeses <= 0) faltando.add("millenium.preventiva-janela-meses");
+        if (pesoRecencia <= 0)   faltando.add("millenium.peso-recencia");
+        if (pesoAntiguidade <= 0) faltando.add("millenium.peso-antiguidade");
+        if (pesoMonetizacao <= 0) faltando.add("millenium.peso-monetizacao");
+        if (!faltando.isEmpty()) {
+            throw new IllegalStateException(
+                "Parametros ausentes/invalidos no application.properties (fonte unica da verdade): "
+                + String.join(", ", faltando)
+                + ". Defina-os e rode 'mvn clean package'.");
+        }
+    }
 
     public String getFonteDir() {
         return fonteDir;

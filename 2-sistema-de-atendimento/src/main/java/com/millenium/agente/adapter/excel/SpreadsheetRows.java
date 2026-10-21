@@ -56,6 +56,16 @@ final class SpreadsheetRows {
             @JsonProperty("problema") String problem) {
     }
 
+    /** N1-OS (ORDEM DE SERVICO) - atendimento tecnico; casa pelo codigo no campo "Pessoa".
+     *  Alimenta o proxy de "ultima visita" (recencia -> gatilho A; manutencao -> gatilho B). */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ServiceOrderRow(
+            @JsonProperty("pessoa") String person,
+            @JsonProperty("finalidade") String purpose,
+            @JsonProperty("abertura") String openDate,
+            @JsonProperty("fechamento") String closeDate) {
+    }
+
     /**
      * NPS (prio 5) - especializacao: lido por POSICAO (o cabecalho e uma pergunta longa).
      * A=carimbo, C=empresa, D=nota, E=comentario (regra do field mapping secao 3.1).

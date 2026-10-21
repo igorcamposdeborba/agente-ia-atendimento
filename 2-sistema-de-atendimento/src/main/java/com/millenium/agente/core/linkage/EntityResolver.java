@@ -8,7 +8,7 @@ import com.millenium.agente.core.dto.N1Record;
 import com.millenium.agente.core.dto.NpsRecord;
 import com.millenium.agente.core.dto.PeopleRecord;
 import com.millenium.agente.core.dto.EngagementSignal;
-import com.millenium.agente.core.normalizacao.Normalizer;
+import com.millenium.agente.core.normalize.Normalizer;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -96,7 +96,7 @@ public final class EntityResolver {
         List<String> matchedSources = new ArrayList<>();
         boolean uncertain = false;
 
-        addSignal(signals, SignalSource.N1, lastVisit, "movimento no N1 (venda/visita - proxy de recencia)");
+        addSignal(signals, SignalSource.N1, lastVisit, "movimento no N1 (venda/visita - proxy de recency)");
         addSignal(signals, SignalSource.N1, lastRegistrationUpdate, "compra registrada no N1 (nota fiscal)");
         addSignal(signals, SignalSource.N1, lastContractUpdate, "atualização/renovação de contrato no N1");
 

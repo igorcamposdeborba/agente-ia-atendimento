@@ -17,7 +17,7 @@ public final class ScoreBands {
     private ScoreBands() {
     }
 
-    // ---------- RFM: recencia (meses de inatividade -> nota) ----------
+    // ---------- RFM: recency (meses de inatividade -> nota) ----------
     /** Cortes de meses de inatividade, do mais urgente ao menos. */
     private static final int[] RECENCY_MONTHS = {24, 12, 6, 3};
     /** Cortes de tempo de casa (meses) para a "antiguidade". */
@@ -29,7 +29,7 @@ public final class ScoreBands {
     public static final int NPS_PROMOTER_MIN = 9;   // 9-10 promotor
     public static final int NPS_PASSIVE_MIN = 7;    // 7-8 passivo; abaixo, detrator
 
-    /** Nota de recencia (1-5). Nunca engajou (null) e o caso mais urgente (5). */
+    /** Nota de recency (1-5). Nunca engajou (null) e o caso mais urgente (5). */
     public static int rfmRecency(Long inactivityMonths) {
         if (inactivityMonths == null) return 5;
         return scoreByDescending(inactivityMonths, RECENCY_MONTHS);

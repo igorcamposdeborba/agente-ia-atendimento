@@ -7,7 +7,7 @@ import com.millenium.agente.core.dto.MegazapRecord;
 import com.millenium.agente.core.dto.N1Record;
 import com.millenium.agente.core.dto.NpsRecord;
 import com.millenium.agente.core.dto.PeopleRecord;
-import com.millenium.agente.core.recencia.RecencyCalculator;
+import com.millenium.agente.core.recency.RecencyCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -55,7 +55,7 @@ class EntityResolverTest {
         assertTrue(c.signals().stream().anyMatch(s -> s.source() == SignalSource.MEGAZAP),
                 "atendimento no Megazap vira sinal de engajamento");
         assertEquals(LocalDate.now().minusDays(5), RecencyCalculator.lastInteraction(c.signals()).orElseThrow(),
-                "a recencia usa o ultimo atendimento");
+                "a recency usa o ultimo atendimento");
         assertEquals(MatchConfidence.EXATO, c.confidence());
     }
 

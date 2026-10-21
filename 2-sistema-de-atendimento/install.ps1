@@ -258,6 +258,10 @@ $jarPath = Join-Path $projectRoot 'target\millenium-agente-ia-0.1.0-SNAPSHOT.jar
 if ($SkipBuild -and (Test-Path $jarPath)) {
     Write-Step 'Build pulado (-SkipBuild); usando jar existente'
 } else {
+    Write-Step 'Sincronizando parametros (wiki\parametros.md -> application.properties)'
+    & (Join-Path $projectRoot 'sync-parametros.ps1') -ProjectRoot $projectRoot
+    Write-Ok 'application.properties gerado a partir do parametros.md (fonte unica)'
+
     Write-Step 'Compilando e empacotando (mvn clean package)'
     Write-Info 'A primeira vez baixa as dependencias e pode demorar alguns minutos...'
     Push-Location $projectRoot

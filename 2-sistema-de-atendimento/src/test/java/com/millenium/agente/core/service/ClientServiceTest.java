@@ -35,7 +35,16 @@ class ClientServiceTest {
             public List<NpsRecord> readNps() { return List.of(); }
             public void reload() { }
         };
-        return new ClientService(source, new MilleniumProperties());
+        MilleniumProperties props = new MilleniumProperties();
+        // Teste define seus proprios limiares (a classe nao tem mais defaults; em producao
+        // vem do application.properties gerado a partir de wiki/parametros.md).
+        props.setAntiguidadeLimiarMeses(24);
+        props.setInatividadeLimiarMeses(8);
+        props.setPreventivaJanelaMeses(12);
+        props.setPesoRecencia(0.4);
+        props.setPesoAntiguidade(0.3);
+        props.setPesoMonetizacao(0.3);
+        return new ClientService(source, props);
     }
 
     @Test

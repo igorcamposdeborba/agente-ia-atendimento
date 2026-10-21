@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Teste de componente das conversoes do leitor de Excel (I/O com muitas combinacoes de formato):
- * datas em varios formatos, valores BR/US e inteiros tolerantes, alem da normalizacao de cabecalho.
+ * datas em varios formatos, valores BR/US e inteiros tolerantes, alem da normalize de cabecalho.
  */
 class ExcelSpreadsheetTest {
 
